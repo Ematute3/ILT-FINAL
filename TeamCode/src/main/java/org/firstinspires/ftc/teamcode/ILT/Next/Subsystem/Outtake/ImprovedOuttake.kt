@@ -4,6 +4,8 @@ import dev.nextftc.core.commands.utility.InstantCommand
 import dev.nextftc.core.subsystems.SubsystemGroup
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.Aimbot
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.Alliance
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.OuttakeMode
+
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.FlyWheel
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Hood
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret
@@ -25,10 +27,6 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret){
 
     // If fullManual is true, the driver does all aiming and shooting themselves.
     // When it’s false, we use the auto-aim and auto-settings logic below.
-    @JvmField var fullManual = false
-
-    // When true, system triggers automated shooting routine (when conditions are met).
-    @JvmField var autoShoot = false
 
 
     // Field X-coordinate of the scoring goal; set dynamically based on alliance.
@@ -36,13 +34,13 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret){
     // Field Y-coordinate of the scoring goal; constant across alliances in this setup.
     val goalY = 144-8.0
 
-
+    var mode: OuttakeMode = OuttakeMode.IDLE
     // Initialize per-alliance goal position so the turret can auto-aim correctly.
     override fun initialize() {
         // In init, I decide where the goal is on the field depending on which alliance we’re on.
         // Red goal is on one side of the field, blue on the opposite.
         goalX = if (DriveTrain.alliance == Alliance.RED) {
-            144-6.0   // Red alliance goal X
+            144-6.0   // Red alliance goal X5
         } else {
             6.0       // Blue alliance goal X
         }
@@ -51,21 +49,28 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret){
     // Main loop: choose manual vs auto aiming and optionally perform auto-shoot.
     override fun periodic() {
         // Every loop, I first decide whether we’re in full manual or assisted mode.
-        if (fullManual) {
-            Turret.autoTurret = false   // Disable auto aim when in full manual
-            manualAim()                 // Placeholder for operator-controlled aiming
-        } else {
-            Turret.autoTurret = true    // Enable turret auto-aim to track goal
-            auto()                     // Optional: run auto hood/flywheel tuning based on distance
-        }
-
-        // If autoShoot is enabled, then we also run the auto shooting routine.
-        if(autoShoot) {
-            autoShoot()
-            auto()
+        when (mode) {
+            OuttakeMode.IDLE -> {
+                // Nothing - safe default
+            }
+            OuttakeMode.MANUAL_AIM -> {
+                Turret.autoTurret = false
+                manualAim()
+            }
+            OuttakeMode.AUTO_AIM -> {
+                Turret.autoTurret = true
+                auto()
+            }
+            OuttakeMode.AUTO_SHOOT -> {
+                autoShoot()
+                auto()
+            }
         }
     }
-
+    fun setManualAim() { mode = OuttakeMode.MANUAL_AIM }
+    fun setAutoAim() { mode = OuttakeMode.AUTO_AIM }
+    fun setAutoShoot() { mode = OuttakeMode.AUTO_SHOOT }
+    fun setIdle() { mode = OuttakeMode.IDLE }
 
 
     // Auto Functions that i need to do
@@ -116,11 +121,12 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret){
    var manualAim = 0
     val aimUp = InstantCommand { manualAim += 12 }
     val aimDown = InstantCommand { manualAim -= 12 }
+    val stopAim = InstantCommand { manualAim = 0}
     @JvmField var canSpin = true
     fun manualAim() {
         // TODO: Implement operator-driven aiming (e.g., stick inputs → Turret.goToYaw).
         // This is left for student work; integrate with NextFTC command bindings.
-          if (fullManual) {
+          if ( mode == OuttakeMode.MANUAL_AIM) {
                    aimDistance()
                   hS.position = hP
                   turret.power = gP

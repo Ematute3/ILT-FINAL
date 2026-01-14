@@ -48,19 +48,19 @@ class TeleOP: NextFTCOpMode() {
 
     override fun onStartButtonPressed() {
         // Intake Controls
-        Gamepads.gamepad1.rightTrigger.greaterThan(0.3) whenBecomesTrue Intake.runIntake whenBecomesFalse Intake.stopIntake
-        Gamepads.gamepad1.leftTrigger.greaterThan(0.3) whenBecomesTrue Intake.reverseIntake whenBecomesFalse Intake.stopIntake
+        Gamepads.gamepad1.rightTrigger.greaterThan(0.5) whenBecomesTrue Intake.runIntake whenBecomesFalse Intake.stopIntake
+        Gamepads.gamepad1.leftTrigger.greaterThan(0.5) whenBecomesTrue Intake.reverseIntake whenBecomesFalse Intake.stopIntake
 
         // Gamepad 2
-        Gamepads.gamepad2.rightTrigger.greaterThan(0.3) whenBecomesTrue ImprovedOuttake.aimUp
-        Gamepads.gamepad2.leftTrigger.greaterThan(0.3) whenBecomesTrue ImprovedOuttake.aimDown
+        Gamepads.gamepad2.rightTrigger.greaterThan(0.5) whenBecomesTrue ImprovedOuttake.aimUp whenBecomesFalse ImprovedOuttake.stopAim
+        Gamepads.gamepad2.leftTrigger.greaterThan(0.5) whenBecomesTrue ImprovedOuttake.aimDown whenBecomesFalse ImprovedOuttake.stopAim
 
         // Flywheel Controls
         Gamepads.gamepad2.a whenBecomesTrue SequentialGroup(InstantCommand{ ImprovedOuttake.canSpin = true},
             FlyWheel.spin)
         Gamepads.gamepad2.b whenBecomesTrue SequentialGroup(InstantCommand { ImprovedOuttake.canSpin = false },
             FlyWheel.stop)
-        Gamepads.gamepad2.x whenBecomesTrue SequentialGroup(FlyWheel.backOut)
+        Gamepads.gamepad2.x whenBecomesTrue FlyWheel.backOut whenBecomesFalse FlyWheel.stop
 
         // Gear Controls
         Gamepads.gamepad2.rightBumper whenBecomesTrue Turret.spinGearRight whenBecomesFalse Turret.stopGear
