@@ -18,6 +18,7 @@ import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain.resetImu
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Intake
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.ImprovedOuttake
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.OuttakeNew
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.FlyWheel
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Hood
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret
@@ -59,10 +60,8 @@ class TeleOP: NextFTCOpMode() {
         Gamepads.gamepad2.leftTrigger.greaterThan(0.5) whenBecomesTrue ImprovedOuttake.aimDown whenBecomesFalse ImprovedOuttake.stopAim
 
         // Flywheel Controls
-        Gamepads.gamepad2.a whenBecomesTrue SequentialGroup(InstantCommand{ ImprovedOuttake.canSpin = true},
-            FlyWheel.spin)
-        Gamepads.gamepad2.b whenBecomesTrue SequentialGroup(InstantCommand { ImprovedOuttake.canSpin = false },
-            FlyWheel.stop)
+        Gamepads.gamepad2.circle whenBecomesTrue FlyWheel.spin whenBecomesFalse FlyWheel.stop
+        Gamepads.gamepad2.square whenBecomesTrue FlyWheel.stop
         Gamepads.gamepad2.x whenBecomesTrue FlyWheel.backOut whenBecomesFalse FlyWheel.stop
 
         // Gear Controls
@@ -76,16 +75,18 @@ class TeleOP: NextFTCOpMode() {
         Gamepads.gamepad2.dpadDown whenBecomesTrue Hood.FlapUp
         // QOL
         Gamepads.gamepad1.triangle whenBecomesTrue {resetImu()}
+        Gamepads.gamepad1.circle whenBecomesTrue {OuttakeNew.manualMode}
+        Gamepads.gamepad1.square whenBecomesTrue {OuttakeNew.autoModeManual}
+        Gamepads.gamepad1.x whenBecomesTrue {OuttakeNew.autoModeLL}
+        Gamepads.gamepad1.rightBumper whenBecomesTrue { OuttakeNew.idleMode }
     }
 
     override fun onUpdate() {
         tele.run {
             addData("Hood Position ", Hood.hP)
             addData("Power ", FlyWheel.targetVelocity)
-            //replace this with LL instead of manualAim
             addData("Distance in Tiles ", ImprovedOuttake.manualAim/24.0)
-            addData("Manual Mode ", OuttakeMode.MANUAL_AIM)
-            addData("Can Shoot", ImprovedOuttake.canSpin)
+            addData("turret", Turret.encoderOffset)
             update()
         }
     }
