@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.ILT.Java;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import dev.nextftc.core.commands.groups.SequentialGroup;
@@ -20,8 +21,8 @@ import org.firstinspires.ftc.teamcode.ILT.Java.SubsystemJava.OuttakeJava.Shooter
 import org.firstinspires.ftc.teamcode.ILT.Java.SubsystemJava.IntakeJava;
 
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-
-@TeleOp(name = "First Try")
+@Disabled
+@TeleOp(name = "First Try - Java")
 public class TeleOpProgram extends NextFTCOpMode {
 
     public TeleOpProgram() {
