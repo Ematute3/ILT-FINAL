@@ -65,7 +65,9 @@ object DriveTrain: Subsystem {
         }
     }
 
-
+    fun resetImu(){
+        imu.zeroed()
+    }
 
 
 

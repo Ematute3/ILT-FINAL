@@ -93,6 +93,7 @@ object FlyWheel: Subsystem {
     }
 
 
+
     val spin = InstantCommand {
         flywheelsOn = true
     }

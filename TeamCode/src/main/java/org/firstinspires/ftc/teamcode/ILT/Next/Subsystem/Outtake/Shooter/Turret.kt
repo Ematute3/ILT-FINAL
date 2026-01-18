@@ -10,13 +10,18 @@ import dev.nextftc.core.subsystems.Subsystem
 import dev.nextftc.ftc.ActiveOpMode
 import dev.nextftc.hardware.impl.MotorEx
 import org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.OuttakeMode
 import kotlin.math.PI
 import kotlin.math.atan2
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain.currentX
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain.currentY
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain.currentHeading
+
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.ImprovedOuttake.autoShoot
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.ImprovedOuttake.goalY
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.ImprovedOuttake.goalX
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.ImprovedOuttake.manualAim
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.ImprovedOuttake.mode
 import org.firstinspires.ftc.teamcode.next.kotlin.subsystems.LLTurret
 
 
@@ -70,23 +75,13 @@ object Turret: Subsystem {
 
 
     override fun periodic() {
-        if(autoTurret) {
-
-            //manually auto aim with out encoder.
-                autoAim()
-            // auto aim with the LL
-                //autoAimLL()
-            // auto aim with the encoder
-                //autoAimAbsolute()
-        }
-
 
         ActiveOpMode.telemetry.run {
             addData("goal", turretController.goal.position)
             addData("turret Pos", getYaw())
         }
     }
-    private fun autoAimLL(){
+     fun autoAimLL(){
         LLTurret.toggleAutoAimLL
     }
 

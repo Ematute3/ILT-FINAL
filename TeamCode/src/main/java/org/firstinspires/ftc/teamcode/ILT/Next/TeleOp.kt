@@ -15,6 +15,7 @@ import dev.nextftc.ftc.components.BulkReadComponent
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.Alliance
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.OuttakeMode
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain.resetImu
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Intake
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.ImprovedOuttake
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.FlyWheel
@@ -73,8 +74,8 @@ class TeleOP: NextFTCOpMode() {
         // Flap Controls
         Gamepads.gamepad2.dpadUp whenBecomesTrue Hood.FlapDown
         Gamepads.gamepad2.dpadDown whenBecomesTrue Hood.FlapUp
-
-        // Aimbot Controls
+        // QOL
+        Gamepads.gamepad1.triangle whenBecomesTrue {resetImu()}
     }
 
     override fun onUpdate() {

@@ -19,6 +19,7 @@ import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.FlyWhee
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.FlyWheel.stop
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Hood.hP
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Hood.hS
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret.autoTurret
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret.gP
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret.turret
 import org.firstinspires.ftc.teamcode.next.kotlin.subsystems.LLAutoVelo
@@ -48,33 +49,8 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret){
     }
 
 
-    override fun periodic() {
 
-        when (mode) {
-            OuttakeMode.IDLE -> {
-
-            }
-            OuttakeMode.MANUAL_AIM -> {
-                Turret.autoTurret = false
-                manualAim()
-            }
-            OuttakeMode.AUTO_AIM -> {
-                Turret.autoTurret = true
-                auto()
-            }
-            OuttakeMode.AUTO_SHOOT -> {
-                autoShoot()
-                auto()
-            }
-        }
-    }
     // got to use these in teleOP
-    fun setManualAim() { mode = OuttakeMode.MANUAL_AIM }
-    fun setAutoAim() { mode = OuttakeMode.AUTO_AIM }
-    fun setAutoShoot() { mode = OuttakeMode.AUTO_SHOOT }
-    fun setIdle() { mode = OuttakeMode.IDLE }
-
-
 
 
 
@@ -82,8 +58,13 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret){
     val distLL: Double = LLAutoVelo.distanceToGoal!!
     val distDiff = distM - distLL
     val values: DoubleArray = Aimbot.getValues(distM)
+    val values2: DoubleArray = Aimbot.getValues(distLL)
 
-    fun auto() {
+    fun autoHoodFlyLL(){
+    Hood.updatePosition(values2[0] + 0.06)
+    FlyWheel.updatePid(values2[1] + 100)
+    }
+    fun autoHoodFlyManual() {
 
         Hood.updatePosition(values[0] + 0.06)
         FlyWheel.updatePid(values[1] + 100)
@@ -108,7 +89,7 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret){
     @JvmField var canSpin = true
     fun manualAim() {
 
-        if ( mode == OuttakeMode.MANUAL_AIM) {
+        if ( mode == OuttakeMode.MANUAL_ADJUST) {
                    aimDistance()
                   hS.position = hP
                   turret.power = gP
