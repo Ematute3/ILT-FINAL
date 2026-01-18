@@ -12,7 +12,7 @@ import dev.nextftc.extensions.pedro.PedroComponent.Companion.follower
 import dev.nextftc.ftc.Gamepads
 import dev.nextftc.ftc.NextFTCOpMode
 import dev.nextftc.ftc.components.BulkReadComponent
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.DriveTrain
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Intake
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.ImprovedOuttake
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.FlyWheel
