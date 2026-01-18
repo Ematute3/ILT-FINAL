@@ -45,9 +45,6 @@ class FlywheelTest: NextFTCOpMode() {
     }
     override fun onUpdate() {
  tele.run {
-    addData("current X", DriveTrain.currentX)
-    addData("current y", DriveTrain.currentY)
-    addData("current H", DriveTrain.currentHeading)
     addData("f1P", FlyWheel.f1.power)
     addData("f1V", FlyWheel.f1.velocity)
     addData("f2V", FlyWheel.f2.velocity)
