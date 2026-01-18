@@ -1,41 +1,40 @@
 package org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled
+import com.qualcomm.robotcore.hardware.AnalogInput
 import com.qualcomm.robotcore.hardware.DcMotor
 import dev.nextftc.control.KineticState
 import dev.nextftc.control.builder.controlSystem
 import dev.nextftc.control.feedback.PIDCoefficients
 import dev.nextftc.core.commands.utility.InstantCommand
 import dev.nextftc.core.subsystems.Subsystem
-import dev.nextftc.extensions.pedro.PedroComponent.Companion.follower
 import dev.nextftc.ftc.ActiveOpMode
 import dev.nextftc.hardware.impl.MotorEx
+import org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap
 import kotlin.math.PI
 import kotlin.math.atan2
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.DriveTrain.currentX
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.DriveTrain.currentY
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.DriveTrain.currentHeading
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.DriveTrain.imu
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain.currentX
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain.currentY
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain.currentHeading
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.ImprovedOuttake.goalY
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.ImprovedOuttake.goalX
 import org.firstinspires.ftc.teamcode.next.kotlin.subsystems.LLTurret
 
 
 
-// gotta absolute encoder
-// heading lock
 
 object Turret: Subsystem {
 
 
-    // Motor that drives the turret. MotorEx wraps the hardware DcMotor with utilities.
+
      val turret = MotorEx("turret")
+
+    private lateinit var turretEncoder: AnalogInput
+    var encoderOffset = 0.0
 
     var gP = 0.0
 
 
-    // Gear ratio between motor and turret output (motor rotations to turret rotations).
-    // This is used to convert encoder ticks into actual turret angle.
+
     private val gearRatio = 3.62068965517
     //105/29
 
@@ -47,29 +46,41 @@ object Turret: Subsystem {
     var turretPID = PIDCoefficients(0.011, 0.0, 0.2)
 
 
+    override fun initialize() {
+        // Initialize absolute encoder using ActiveOpMode.hardwareMap
+        // This name MUST match the name in Driver Hub configuration
+        turretEncoder = ActiveOpMode.hardwareMap.get(AnalogInput::class.java, "encoder")
+
+        // Set initial offset (calibrate turret to forward position)
+        // This will be adjusted when you run calibrateAbsoluteEncoder command
+        encoderOffset = 0.0
+    }
+
+
+
     // Control system that uses the position PID to compute motor power based on goal vs current state.
     var turretController = controlSystem {
         posPid(turretPID)
     }
 
-    // Encoder resolution (ticks per revolution) for the motor (goBilda 312 RPM, 537.7 PPR).
     private val ppr = 537.7 // The resolution of our motor encoder on the goBilda site
+    // may have to change thisd based on the absolute encoder
 
-    // Radians per encoder tick at the turret output.
-    // 2π radians per full rotation, divided by ticks per motor rev and the gear ratio.
-    private val rpt = 2* PI /(ppr * gearRatio) // The amount of radians per turn of the motor
+    private val rpt = 2* PI /(ppr * gearRatio)
 
-    // Called every loop; handles auto-aim and telemetry.
+
     override fun periodic() {
         if(autoTurret) {
-            // If automatic aiming is enabled, compute target angle and drive the turret.
-            //manually auto aim
+
+            //manually auto aim with out encoder.
                 autoAim()
-            //use the LL to auto aim
-            //autoAimLL()
+            // auto aim with the LL
+                //autoAimLL()
+            // auto aim with the encoder
+                //autoAimAbsolute()
         }
 
-        // Report the current goal and measured yaw for debugging/driver info.
+
         ActiveOpMode.telemetry.run {
             addData("goal", turretController.goal.position)
             addData("turret Pos", getYaw())
@@ -95,39 +106,37 @@ object Turret: Subsystem {
 
     val deltaHeading2 = normalizeAngle(this.mu2 - currentHeading)
 
-   //Manual Aim turret
 
-    // Computes the desired turret heading to point at the current goal (goalX, goalY),
-    // relative to the robot's current field position (currentX, currentY) and heading.
+
      fun autoAim() {
-        // Angle from robot position to goal in field coordinates.
+        // add the abosulte encode that we got
         val mu = atan2(goalY - currentY, goalX - currentX)
 
-        // Desired turret offset relative to the robot's current heading.
+
         val deltaHeading = normalizeAngle(mu - currentHeading)
 
-        // Safety clamp to keep command within [-π, π] before sending to controller.
+        // change this based off degree with new wires anmd my mess up
         val clampedHeading = deltaHeading.coerceIn(-PI, PI)
 
-        // Set the controller's goal to the angle offset; zero desired velocity (position hold).
+
         turretController.goal = KineticState(clampedHeading, 0.0)
 
-        // Calculate motor power based on current turret yaw vs goal, then apply it.
+
         turret.power = turretController.calculate(KineticState(getYaw(), 0.0))
     }
 
-    // Set a direct yaw target for the turret controller (in radians).
-    fun goToYaw(yaw:Double) { // Go to a specific position
+
+    fun goToYaw(yaw:Double) {
         turretController.goal = KineticState(yaw, 0.0)
     }
 
-    // Convert encoder ticks to a normalized yaw angle in [-π, π].
-    fun getYaw(): Double { // Get the current yaw of the turret from [-pi, pi]
+
+    fun getYaw(): Double {
         return normalizeAngle(turret.currentPosition * rpt)
     }
 
-    // Normalize any angle (radians) to the principal range [-π, π] to avoid wrap-around issues.
-    fun normalizeAngle(angleRadians: Double): Double { // Returns a normalized angle between [-pi, pi]
+
+    fun normalizeAngle(angleRadians: Double): Double {
         var angle = angleRadians % (2.0 * PI)
         if (angle <= -PI) {
             angle += 2.0 * PI
@@ -137,6 +146,48 @@ object Turret: Subsystem {
         }
         return angle
     }
+    // ========== ABSOLUTE ENCODER FUNCTIONS ==========
 
+    fun getAbsolutePositionRatio(): Double {
+        return turretEncoder.voltage / turretEncoder.maxVoltage
+    }
+
+    fun getAbsolutePositionDegrees(): Double {
+        return getAbsolutePositionRatio() * 360.0
+    }
+
+    fun getAbsolutePositionRadians(): Double {
+        return getAbsolutePositionRatio() * 2.0 * PI
+    }
+    fun getAbsoluteYaw(): Double {
+        return normalizeAngle(getAbsolutePositionRadians() - encoderOffset)
+    }
+
+    fun calibrateAbsoluteEncoder() {
+        encoderOffset = getAbsolutePositionRadians()
+    }
+
+    val calibrateEncoderCommand = InstantCommand {
+        calibrateAbsoluteEncoder()
+    }
+
+    fun autoAimAbsolute() {
+        val mu = atan2(goalY - currentY, goalX - currentX)
+        val deltaHeading = normalizeAngle(mu - currentHeading)
+        val clampedHeading = deltaHeading.coerceIn(-PI, PI)
+
+        turretController.goal = KineticState(clampedHeading, 0.0)
+
+        // Use absolute encoder for position feedback
+        turret.power = turretController.calculate(KineticState(getAbsoluteYaw(), 0.0))
+    }
+
+    fun goToYawAbsolute(yaw: Double) {
+        turretController.goal = KineticState(yaw, 0.0)
+        turret.power = turretController.calculate(KineticState(getAbsoluteYaw(), 0.0))
+    }
 
 }
+
+
+

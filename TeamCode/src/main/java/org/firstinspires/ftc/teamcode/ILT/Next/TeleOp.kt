@@ -13,7 +13,8 @@ import dev.nextftc.ftc.Gamepads
 import dev.nextftc.ftc.NextFTCOpMode
 import dev.nextftc.ftc.components.BulkReadComponent
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.Alliance
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.DriveTrain
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.OuttakeMode
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Intake
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.ImprovedOuttake
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.FlyWheel
@@ -37,6 +38,7 @@ class TeleOP: NextFTCOpMode() {
     }
 
     override fun onInit() {
+        // gotta find a way to set alliance
         //when (DriveTrain.alliance) {
             // got to add auto
             //Alliance.RED -> follower.setStartingPose(Far12.park)
@@ -81,7 +83,7 @@ class TeleOP: NextFTCOpMode() {
             addData("Power ", FlyWheel.targetVelocity)
             //replace this with LL instead of manualAim
             addData("Distance in Tiles ", ImprovedOuttake.manualAim/24.0)
-            addData("Manual Mode ", ImprovedOuttake.fullManual)
+            addData("Manual Mode ", OuttakeMode.MANUAL_AIM)
             addData("Can Shoot", ImprovedOuttake.canSpin)
             update()
         }
