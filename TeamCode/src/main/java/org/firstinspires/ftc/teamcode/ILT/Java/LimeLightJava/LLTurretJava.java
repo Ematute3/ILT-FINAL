@@ -1,10 +1,12 @@
 package org.firstinspires.ftc.teamcode.ILT.Java.LimeLightJava;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+
 import dev.nextftc.control.KineticState;
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.subsystems.Subsystem;
 import org.firstinspires.ftc.teamcode.ILT.Java.SubsystemJava.OuttakeJava.ShooterJava.TurretJava;
-
+@Disabled
 public class LLTurretJava implements Subsystem {
 
     // Config

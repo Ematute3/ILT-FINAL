@@ -108,7 +108,7 @@ object FlyWheel: Subsystem {
     // might need to change the seconds
     val Shoot = SequentialGroup(
         spin,
-        Delay(0.1.seconds),
+       // when(f1.state = targetVelocity),
         Intake.runIntake,
         Delay(0.5.seconds),
         stop,

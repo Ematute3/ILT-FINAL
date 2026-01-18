@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.ILT.Java.SubsystemJava.OuttakeJava;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.subsystems.SubsystemGroup;
 
@@ -18,7 +20,7 @@ import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Hood; /
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret; // for gP, turret
 import org.firstinspires.ftc.teamcode.next.kotlin.subsystems.LLAutoVelo;
 
-
+@Disabled
 public class ImprovedOuttakeJava extends SubsystemGroup {
     public static final ImprovedOuttakeJava INSTANCE = new ImprovedOuttakeJava();
 

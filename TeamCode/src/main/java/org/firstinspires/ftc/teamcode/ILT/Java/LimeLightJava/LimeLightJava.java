@@ -4,6 +4,8 @@ import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+
 import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.ftc.ActiveOpMode;
 
@@ -12,7 +14,7 @@ import org.firstinspires.ftc.teamcode.ILT.Java.SubsystemJava.DriveTrainJava;
 import org.firstinspires.ftc.teamcode.next.subsystems.data.Motif;
 
 import java.util.List;
-
+@Disabled
 public class LimeLightJava implements Subsystem {
 
     // Holds a reference to our Limelight3A camera.

@@ -2,9 +2,11 @@ package org.firstinspires.ftc.teamcode.ILT.Java.LimeLightJava;
 
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+
 import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.ftc.ActiveOpMode;
-
+@Disabled
 public class LLAutoVeloJava implements Subsystem {
 
     // Here I'm declaring the Limelight camera object.

@@ -7,6 +7,7 @@ import static org.firstinspires.ftc.teamcode.ILT.Java.SubsystemJava.DriveTrainJa
 import static org.firstinspires.ftc.teamcode.ILT.Java.SubsystemJava.OuttakeJava.ImprovedOuttakeJava.goalX;
 import static org.firstinspires.ftc.teamcode.ILT.Java.SubsystemJava.OuttakeJava.ImprovedOuttakeJava.goalY;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
 import com.bylazar.configurables.annotations.Configurable;
@@ -21,7 +22,7 @@ import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.ftc.ActiveOpMode;
 import dev.nextftc.hardware.impl.MotorEx;
 
-
+@Disabled
 @Configurable
 public class TurretJava implements Subsystem {
 

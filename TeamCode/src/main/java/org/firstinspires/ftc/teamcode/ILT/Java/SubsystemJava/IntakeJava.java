@@ -1,11 +1,13 @@
 package org.firstinspires.ftc.teamcode.ILT.Java.SubsystemJava;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.hardware.controllable.MotorGroup;
 import dev.nextftc.hardware.impl.MotorEx;
-
+@Disabled
 @Configurable
 public class IntakeJava implements Subsystem {
     public static final IntakeJava INSTANCE = new IntakeJava();

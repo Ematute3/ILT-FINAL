@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode.ILT.Java.SubsystemJava;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+
 import dev.nextftc.core.commands.Command;
 import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.extensions.pedro.PedroComponent;
@@ -12,7 +14,7 @@ import dev.nextftc.hardware.impl.Direction;
 import dev.nextftc.hardware.impl.IMUEx;
 import dev.nextftc.hardware.impl.MotorEx;
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.Alliance;
-
+@Disabled
 @Configurable
 public class DriveTrainJava implements Subsystem {
     public static final DriveTrainJava INSTANCE = new DriveTrainJava();

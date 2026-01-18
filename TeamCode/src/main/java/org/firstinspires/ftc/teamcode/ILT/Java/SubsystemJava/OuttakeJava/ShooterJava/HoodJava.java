@@ -1,10 +1,12 @@
 package org.firstinspires.ftc.teamcode.ILT.Java.SubsystemJava.OuttakeJava.ShooterJava;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+
 import dev.nextftc.core.commands.utility.InstantCommand;
 import dev.nextftc.core.subsystems.Subsystem;
 import dev.nextftc.hardware.impl.ServoEx;
-
+@Disabled
 @Configurable
 public class HoodJava implements Subsystem {
     // Servo driving the hood/flap that adjusts shot angle/trajectory

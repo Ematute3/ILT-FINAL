@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.ILT.Java.SubsystemJava.OuttakeJava.ShooterJava;
 
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+
 import dev.nextftc.control.KineticState;
 import dev.nextftc.control.builder.ControlSystemBuilderKt;
 import dev.nextftc.control.feedback.PIDCoefficients;
@@ -13,7 +15,7 @@ import dev.nextftc.hardware.impl.MotorEx;
 
 import org.firstinspires.ftc.teamcode.ILT.Java.SubsystemJava.IntakeJava;
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Intake;
-
+@Disabled
 public class FlyWheelJava implements Subsystem {
     // Primary flywheel motor.
     public static final MotorEx f1 = new MotorEx("f1M");
