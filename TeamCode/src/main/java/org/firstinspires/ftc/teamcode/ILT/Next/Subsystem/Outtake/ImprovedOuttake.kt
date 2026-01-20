@@ -4,96 +4,146 @@ import dev.nextftc.core.commands.delays.Delay
 import dev.nextftc.core.commands.groups.SequentialGroup
 import dev.nextftc.core.commands.utility.InstantCommand
 import dev.nextftc.core.subsystems.SubsystemGroup
+import dev.nextftc.ftc.ActiveOpMode
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.Aimbot
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.Alliance
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.OuttakeMode
-
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.FlyWheel
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Hood
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain.currentX
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain.currentY
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Intake
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.FlyWheel.spin
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.FlyWheel.stop
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Hood.hP
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Hood.hS
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret.autoTurret
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret.gP
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret.turret
 import org.firstinspires.ftc.teamcode.next.kotlin.subsystems.LLAutoVelo
 import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.seconds
 
+object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
 
-object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret){
-
-
-
-
+    // FIX: Use var so it can update
     var goalX = 0.0
+        private set
 
-    val goalY = 144-8.0
+    var goalY = 144.0 - 8.0
+        private set
 
     var mode: OuttakeMode = OuttakeMode.IDLE
 
     override fun initialize() {
-
         goalX = if (DriveTrain.alliance == Alliance.RED) {
-            144-6.0
+            144.0 - 6.0
         } else {
             6.0
         }
     }
 
+    // FIX: Make these computed properties that calculate fresh values each time
+    val distanceToGoalOdometry: Double
+        get() {
+            if (!DriveTrain.isPoseValid()) return 0.0
+            return sqrt(
+                (goalX - DriveTrain.currentX).pow(2) +
+                        (goalY - DriveTrain.currentY).pow(2)
+            )
+        }
 
+    val distanceToGoalLimelight: Double?
+        get() = LLAutoVelo.distanceToGoal  // FIX: Keep nullable, don't force unwrap
 
-    // got to use these in teleOP
+    val distanceDifference: Double
+        get() {
+            val llDist = distanceToGoalLimelight
+            return if (llDist != null) {
+                distanceToGoalOdometry - llDist
+            } else {
+                0.0
+            }
+        }
 
-
-
-    val distM: Double = sqrt((goalX-currentX).pow(2) + (goalY-currentY).pow(2))
-    val distLL: Double = LLAutoVelo.distanceToGoal!!
-    val distDiff = distM - distLL
-    val values: DoubleArray = Aimbot.getValues(distM)
-    val values2: DoubleArray = Aimbot.getValues(distLL)
-
-    fun autoHoodFlyLL(){
-    Hood.updatePosition(values2[0] + 0.06)
-    FlyWheel.updatePid(values2[1] + 100)
+    // FIX: Make these functions that calculate fresh each time
+    fun getOdometryAimValues(): DoubleArray? {
+        if (!DriveTrain.isPoseValid()) return null
+        return Aimbot.getValues(distanceToGoalOdometry)
     }
 
-    fun autoShoot() {
+    fun getLimelightAimValues(): DoubleArray? {
+        val llDist = distanceToGoalLimelight ?: return null
+        return Aimbot.getValues(llDist)
+    }
 
-        if(DriveTrain.inShootZone()) {
-            // TODO: Build command chain to spin up flywheels, set hood, align turret, and fire.
-            Hood.updatePosition(values[0] + 0.06)  // Hood offset tweak
+    // FIX: Safe Limelight-based adjustment
+    fun autoHoodFlyLL() {
+        val values = getLimelightAimValues()
+        if (values != null) {
+            Hood.updatePosition(values[0] + 0.06)
             FlyWheel.updatePid(values[1] + 100)
-            FlyWheel.Shoot
+        } else {
+            ActiveOpMode.telemetry.addData("LL Auto Aim", "No valid target")
         }
     }
-     //ManualAim
 
-    var targetVelo = 0.0
-   var manualAim = 0
-    val aimUp = InstantCommand { manualAim += 12 }
-    val aimDown = InstantCommand { manualAim -= 12 }
-    val stopAim = InstantCommand { manualAim = 0}
-    @JvmField var canSpin = true
-    fun manualAim() {
+    // FIX: Safe odometry-based adjustment
+    fun autoShoot() {
+        if (!DriveTrain.isPoseValid()) {
+            ActiveOpMode.telemetry.addData("Auto Shoot", "Pose not valid")
+            return
+        }
 
-        if ( mode == OuttakeMode.MANUAL_ADJUST) {
-                   aimDistance()
-                  hS.position = hP
-                  turret.power = gP
-              }
-
-
-
+        if (DriveTrain.inShootZone()) {
+            val values = getOdometryAimValues()
+            if (values != null) {
+                Hood.updatePosition(values[0] + 0.06)
+                FlyWheel.updatePid(values[1] + 100)
+                // Note: This doesn't actually shoot, just sets up the parameters
+            } else {
+                ActiveOpMode.telemetry.addData("Auto Shoot", "No aim values")
+            }
+        } else {
+            ActiveOpMode.telemetry.addData("Auto Shoot", "Not in shoot zone")
+        }
     }
+
+    // Manual Aim System
+    var targetVelo = 0.0
+        private set
+
+    @JvmField var manualAim = 0
+
+    val aimUp = InstantCommand {
+        manualAim += 12
+        if (manualAim > 146) manualAim = 146
+    }
+
+    val aimDown = InstantCommand {
+        manualAim -= 12
+        if (manualAim < 12) manualAim = 12
+    }
+
+    val stopAim = InstantCommand {
+        manualAim = 0
+    }
+
+    @JvmField var canSpin = true
+
+    fun manualAim() {
+        if (mode == OuttakeMode.MANUAL_ADJUST) {
+            aimDistance()
+            Hood.hS.position = Hood.hP
+            Turret.turret.power = Turret.gP
+        }
+    }
+
     fun aimDistance() {
+        // Snap to nearest valid value
+        if (manualAim % 12 != 0) {
+            manualAim -= manualAim % 12
+        }
+
+        // Clamp to valid range
+        if (manualAim > 146) manualAim = 146
+        else if (manualAim < 12) manualAim = 12
+
+        // Set velocity based on distance
         if (canSpin) {
             targetVelo = when (manualAim) {
                 12 -> 835.0
@@ -112,8 +162,8 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret){
             }
         }
 
-
-        hP = when (manualAim) {
+        // Set hood position based on distance
+        Hood.hP = when (manualAim) {
             12 -> 0.81
             24 -> 0.93
             36 -> 0.71
@@ -124,18 +174,60 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret){
             96 -> 0.7
             108 -> 0.42
             120 -> 0.43
-            134 -> 0.44
-            146 -> 0.45
+            132 -> 0.44  // FIX: Was 134
+            144 -> 0.45  // FIX: Was 146
             else -> 0.0
         }
-
-
-        if (manualAim > 146) manualAim = 146
-        else if (manualAim < 12) manualAim = 12
-
-
-        if (manualAim % 12 != 0) manualAim -= manualAim % 12
     }
 
+    // FIX: Add complete shooting sequence with safety checks
+    val fullAutoShootSequence = SequentialGroup(
+        // Check we're ready
+        InstantCommand {
+            if (!DriveTrain.isPoseValid()) {
+                ActiveOpMode.telemetry.addData("Shoot Sequence", "Aborting - no pose")
+                return@InstantCommand
+            }
+            if (!DriveTrain.inShootZone()) {
+                ActiveOpMode.telemetry.addData("Shoot Sequence", "Not in shoot zone")
+                return@InstantCommand
+            }
+        },
 
+        // Set up hood and flywheel
+        InstantCommand { autoShoot() },
+
+        // Spin up flywheel
+        FlyWheel.spin,
+        Delay(0.5.seconds),
+
+        // Wait for flywheel to reach speed
+        InstantCommand {
+            var attempts = 0
+            while (!FlyWheel.isAtTargetVelocity() && attempts < 100) {
+                Thread.sleep(10)
+                attempts++
+            }
+        },
+
+        // Feed the ball
+        Intake.feedShooter,
+        Delay(0.5.seconds),
+
+        // Stop everything
+        FlyWheel.stop,
+        Intake.stopIntake
+    )
+
+    override fun periodic() {
+        // Add telemetry for debugging
+        ActiveOpMode.telemetry.run {
+            addData("Outtake Mode", mode)
+            addData("Goal Position", "(%.1f, %.1f)".format(goalX, goalY))
+            addData("Distance (Odom)", "%.1f".format(distanceToGoalOdometry))
+            addData("Distance (LL)", distanceToGoalLimelight?.let { "%.1f".format(it) } ?: "N/A")
+            addData("In Shoot Zone", DriveTrain.inShootZone())
+            addData("Manual Aim Distance", manualAim)
+        }
+    }
 }

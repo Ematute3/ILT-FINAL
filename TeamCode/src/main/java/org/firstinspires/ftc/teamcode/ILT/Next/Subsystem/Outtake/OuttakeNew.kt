@@ -1,64 +1,58 @@
 package org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake
 
 import dev.nextftc.core.commands.utility.InstantCommand
-import dev.nextftc.core.components.SubsystemComponent
 import dev.nextftc.core.subsystems.Subsystem
-import dev.nextftc.core.subsystems.SubsystemGroup
 import dev.nextftc.ftc.ActiveOpMode
-import dev.nextftc.ftc.NextFTCOpMode
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.Aimbot
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.Alliance
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.OuttakeMode
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.ShootMode
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.TurretMode
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain.currentX
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain.currentY
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Intake
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Intake.iP
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.FlyWheel
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Hood
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Hood.hP
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Hood.hS
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret.gP
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret.getYaw
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret.turret
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret.turretController
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.limeLight.limeLight
-import org.firstinspires.ftc.teamcode.next.kotlin.subsystems.LLAutoVelo
 import org.firstinspires.ftc.teamcode.next.kotlin.subsystems.LLTurret
-import kotlin.math.pow
-import kotlin.math.sqrt
 
 object OuttakeNew: Subsystem {
+
     var adjustMode: OuttakeMode = OuttakeMode.IDLE
+        private set
+
     var turretMode: TurretMode = TurretMode.IDLE
-    //var shootMode: ShootMode = ShootMode.IDLE
+        private set
+
+    // FIX: Track if we've enabled LL aim to prevent toggling
+    private var llAimWasEnabled = false
 
     override fun periodic() {
         // Handle outtake adjustment modes
         when(adjustMode) {
             OuttakeMode.IDLE -> {
                 // Stop all adjustment
-                Hood.stopHood
-                Intake.stopIntake
-
+                Hood.hoodReset.schedule()
+                Intake.stopIntake.schedule()
             }
+
             OuttakeMode.MANUAL_ADJUST -> {
-                // Manual control is handled elsewhere (gamepad inputs)
-                // Hood uses hP variable, FlyWheel uses manual commands
+                // Manual control handled by ImprovedOuttake
                 ImprovedOuttake.manualAim()
-
             }
+
             OuttakeMode.AUTO_ADJUST_MANUAL -> {
-                // Auto-adjust based on distance calculation
-                ImprovedOuttake.autoShoot()
-
+                // FIX: Only run if pose is valid
+                if (DriveTrain.isPoseValid()) {
+                    ImprovedOuttake.autoShoot()
+                } else {
+                    ActiveOpMode.telemetry.addData("Auto Adjust", "Waiting for pose...")
+                }
             }
+
             OuttakeMode.AUTO_ADJUST_LL -> {
-                // Use Limelight for auto-adjustment
-                ImprovedOuttake.autoHoodFlyLL()
+                // FIX: Only run if Limelight is ready
+                if (limeLight.isReady() && limeLight.hasValidTarget) {
+                    ImprovedOuttake.autoHoodFlyLL()
+                } else {
+                    ActiveOpMode.telemetry.addData("Auto Adjust LL", "No target")
+                }
             }
         }
 
@@ -67,32 +61,84 @@ object OuttakeNew: Subsystem {
             TurretMode.IDLE -> {
                 // Stop turret movement
                 Turret.turret.power = 0.0
+                // FIX: Disable LL aim if it was enabled
+                if (llAimWasEnabled) {
+                    LLTurret.autoAimEnabled = false
+                    llAimWasEnabled = false
+                }
             }
-            TurretMode.LL_AIM -> {
-                // Use Limelight for aiming
 
-                Turret.autoAimLL()
+            TurretMode.LL_AIM -> {
+                // FIX: Enable LL aim once, not toggle every frame
+                if (!llAimWasEnabled) {
+                    LLTurret.autoAimEnabled = true
+                    llAimWasEnabled = true
+                }
+                // LLTurret.periodic() handles the actual aiming
+
+                // FIX: Check if LL is ready
+                if (!limeLight.isReady()) {
+                    ActiveOpMode.telemetry.addData("LL Turret", "Limelight not ready")
+                } else if (!limeLight.hasValidTarget) {
+                    ActiveOpMode.telemetry.addData("LL Turret", "No target")
+                }
             }
+
             TurretMode.MANUAL_AIM -> {
                 // Manual aiming uses gP variable (set by gamepad)
-                Turret.turret.power = gP
+                // FIX: Disable LL aim
+                if (llAimWasEnabled) {
+                    LLTurret.autoAimEnabled = false
+                    llAimWasEnabled = false
+                }
+                Turret.turret.power = Turret.gP
             }
+
             TurretMode.ENCODER_AIM -> {
-                // Use encoder-based auto-aim
-                Turret.autoAimAbsolute()
+                // FIX: Disable LL aim
+                if (llAimWasEnabled) {
+                    LLTurret.autoAimEnabled = false
+                    llAimWasEnabled = false
+                }
+
+                // FIX: Only run if pose is valid
+                if (DriveTrain.isPoseValid()) {
+                    Turret.autoAimAbsolute()
+                } else {
+                    ActiveOpMode.telemetry.addData("Encoder Aim", "Waiting for pose...")
+                    Turret.turret.power = 0.0
+                }
             }
-            TurretMode.PEDRO_AIM ->{
-                Turret.autoAim()
+
+            TurretMode.PEDRO_AIM -> {
+                // FIX: Disable LL aim
+                if (llAimWasEnabled) {
+                    LLTurret.autoAimEnabled = false
+                    llAimWasEnabled = false
+                }
+
+                // FIX: Only run if pose is valid
+                if (DriveTrain.isPoseValid()) {
+                    Turret.autoAim()
+                } else {
+                    ActiveOpMode.telemetry.addData("Pedro Aim", "Waiting for pose...")
+                    Turret.turret.power = 0.0
+                }
             }
-      }
-        ActiveOpMode.telemetry.run {
-            addData("Adjust Mode", adjustMode)
-            addData("Turret Mode", turretMode)
         }
 
+        // Telemetry
+        ActiveOpMode.telemetry.run {
+            addData("=== OUTTAKE STATUS ===", "")
+            addData("Adjust Mode", adjustMode)
+            addData("Turret Mode", turretMode)
+            addData("LL Aim Active", LLTurret.autoAimEnabled)
+            addData("Pose Valid", DriveTrain.isPoseValid())
+            addData("LL Ready", limeLight.isReady())
+        }
     }
 
-    // Quick mode switching commands
+    // FIX: Safe mode switching commands
     val idleMode = InstantCommand {
         adjustMode = OuttakeMode.IDLE
         turretMode = TurretMode.IDLE
@@ -104,12 +150,63 @@ object OuttakeNew: Subsystem {
     }
 
     val autoModeManual = InstantCommand {
+        // FIX: Check prerequisites
+        if (!DriveTrain.isPoseValid()) {
+            ActiveOpMode.telemetry.addData("Mode Switch", "Cannot use auto - no pose")
+            return@InstantCommand
+        }
         adjustMode = OuttakeMode.AUTO_ADJUST_MANUAL
         turretMode = TurretMode.ENCODER_AIM
     }
 
+    val autoModePedro = InstantCommand {
+        if (!DriveTrain.isPoseValid()) {
+            ActiveOpMode.telemetry.addData("Mode Switch", "Cannot use Pedro aim - no pose")
+            return@InstantCommand
+        }
+        adjustMode = OuttakeMode.AUTO_ADJUST_MANUAL
+        turretMode = TurretMode.PEDRO_AIM
+    }
+
     val autoModeLL = InstantCommand {
+        // FIX: Check prerequisites
+        if (!limeLight.isReady()) {
+            ActiveOpMode.telemetry.addData("Mode Switch", "Cannot use LL - not ready")
+            return@InstantCommand
+        }
         adjustMode = OuttakeMode.AUTO_ADJUST_LL
         turretMode = TurretMode.LL_AIM
+    }
+
+    // FIX: Add helper functions
+    fun setAdjustMode(mode: OuttakeMode) {
+        adjustMode = mode
+    }
+
+    fun setTurretMode(mode: TurretMode) {
+        // Clean up previous mode
+        when(turretMode) {
+            TurretMode.LL_AIM -> {
+                LLTurret.autoAimEnabled = false
+                llAimWasEnabled = false
+            }
+            else -> {}
+        }
+        turretMode = mode
+    }
+
+    // FIX: Combined mode setter
+    fun setModes(adjust: OuttakeMode, turret: TurretMode) {
+        setAdjustMode(adjust)
+        setTurretMode(turret)
+    }
+
+    // Helper to check if ready for auto modes
+    fun canUseAutoModes(): Boolean {
+        return DriveTrain.isPoseValid()
+    }
+
+    fun canUseLLModes(): Boolean {
+        return limeLight.isReady() && limeLight.hasValidTarget
     }
 }

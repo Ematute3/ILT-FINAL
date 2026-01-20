@@ -3,90 +3,113 @@ package org.firstinspires.ftc.teamcode.next
 import com.bylazar.telemetry.JoinedTelemetry
 import com.bylazar.telemetry.PanelsTelemetry
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
-import dev.nextftc.core.commands.groups.SequentialGroup
 import dev.nextftc.core.commands.utility.InstantCommand
 import dev.nextftc.core.components.BindingsComponent
 import dev.nextftc.core.components.SubsystemComponent
 import dev.nextftc.extensions.pedro.PedroComponent
-import dev.nextftc.extensions.pedro.PedroComponent.Companion.follower
 import dev.nextftc.ftc.Gamepads
 import dev.nextftc.ftc.NextFTCOpMode
 import dev.nextftc.ftc.components.BulkReadComponent
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.Alliance
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.OuttakeMode
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain
-import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain.resetImu
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Intake
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.ImprovedOuttake
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.OuttakeNew
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.FlyWheel
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Hood
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret
-import org.firstinspires.ftc.teamcode.ILT.Next.TestOp.HoodTestOp
+import org.firstinspires.ftc.teamcode.next.kotlin.subsystems.LLTurret
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants
 
-
-@TeleOp(name = "First Try")
+@TeleOp(name = "Final-Teleop")
 class TeleOP: NextFTCOpMode() {
     var tele = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, telemetry)
 
     init {
         addComponents(
             PedroComponent(Constants::createFollower),
-            SubsystemComponent(Intake, ImprovedOuttake, DriveTrain),
+            // Register ALL subsystems including OuttakeNew and individual shooter subsystems
+            SubsystemComponent(
+                Intake,
+                OuttakeNew,      // ✅ Added OuttakeNew
+                ImprovedOuttake,
+                DriveTrain,
+                Hood,            // ✅ Added individual subsystems
+                FlyWheel,
+                Turret,
+                LLTurret         // ✅ Added LLTurret so its periodic runs
+            ),
             BulkReadComponent,
             BindingsComponent,
         )
     }
 
     override fun onInit() {
-        // gotta find a way to set alliance
-        //when (DriveTrain.alliance) {
-            // got to add auto
-            //Alliance.RED -> follower.setStartingPose(Far12.park)
-            //Alliance.BLUE -> follower.setStartingPose(Far12.park.mirror())
-       // }
+        // Set alliance (you can make this configurable via gamepad later)
+        DriveTrain.setAlliance(Alliance.RED)  // Change as needed
+
+        // Optional: Set starting pose if needed
+        // PedroComponent.follower?.setStartingPose(yourStartPose)
     }
 
-
-
     override fun onStartButtonPressed() {
-        // Intake Controls
+        // ========== INTAKE CONTROLS (Gamepad 1) ==========
         Gamepads.gamepad1.rightTrigger.greaterThan(0.5) whenBecomesTrue Intake.runIntake whenBecomesFalse Intake.stopIntake
         Gamepads.gamepad1.leftTrigger.greaterThan(0.5) whenBecomesTrue Intake.reverseIntake whenBecomesFalse Intake.stopIntake
 
-        // Gamepad 2
+        // ========== MANUAL AIM ADJUSTMENT (Gamepad 2) ==========
         Gamepads.gamepad2.rightTrigger.greaterThan(0.5) whenBecomesTrue ImprovedOuttake.aimUp whenBecomesFalse ImprovedOuttake.stopAim
         Gamepads.gamepad2.leftTrigger.greaterThan(0.5) whenBecomesTrue ImprovedOuttake.aimDown whenBecomesFalse ImprovedOuttake.stopAim
 
-        // Flywheel Controls
+        // ========== FLYWHEEL CONTROLS (Gamepad 2) ==========
         Gamepads.gamepad2.circle whenBecomesTrue FlyWheel.spin whenBecomesFalse FlyWheel.stop
         Gamepads.gamepad2.square whenBecomesTrue FlyWheel.stop
         Gamepads.gamepad2.x whenBecomesTrue FlyWheel.backOut whenBecomesFalse FlyWheel.stop
 
-        // Gear Controls
+        // ========== TURRET MANUAL CONTROLS (Gamepad 2) ==========
         Gamepads.gamepad2.rightBumper whenBecomesTrue Turret.spinGearRight whenBecomesFalse Turret.stopGear
         Gamepads.gamepad2.leftBumper whenBecomesTrue Turret.spinGearLeft whenBecomesFalse Turret.stopGear
-        Gamepads.gamepad2.dpadRight whenBecomesTrue Turret.gearAlittleLeft whenBecomesFalse Turret.stopGear
-        Gamepads.gamepad2.dpadLeft whenBecomesTrue Turret.gearAlittleRight whenBecomesFalse Turret.stopGear
+        Gamepads.gamepad2.dpadRight whenBecomesTrue Turret.gearAlittleRight whenBecomesFalse Turret.stopGear
+        Gamepads.gamepad2.dpadLeft whenBecomesTrue Turret.gearAlittleLeft whenBecomesFalse Turret.stopGear
 
-        // Flap Controls
+        // ========== HOOD CONTROLS (Gamepad 2) ==========
         Gamepads.gamepad2.dpadUp whenBecomesTrue Hood.FlapDown
         Gamepads.gamepad2.dpadDown whenBecomesTrue Hood.FlapUp
-        // QOL
-        Gamepads.gamepad1.triangle whenBecomesTrue {resetImu()}
-        Gamepads.gamepad1.circle whenBecomesTrue {OuttakeNew.manualMode}
-        Gamepads.gamepad1.square whenBecomesTrue {OuttakeNew.autoModeManual}
-        Gamepads.gamepad1.x whenBecomesTrue {OuttakeNew.autoModeLL}
-        Gamepads.gamepad1.rightBumper whenBecomesTrue { OuttakeNew.idleMode }
+
+        // ========== MODE SWITCHING (Gamepad 1) ==========
+        Gamepads.gamepad1.triangle whenBecomesTrue InstantCommand { DriveTrain.resetImu() }
+        Gamepads.gamepad1.circle whenBecomesTrue OuttakeNew.manualMode        // ✅ Fixed
+        Gamepads.gamepad1.square whenBecomesTrue OuttakeNew.autoModeManual    // ✅ Fixed
+        Gamepads.gamepad1.x whenBecomesTrue OuttakeNew.autoModeLL             // ✅ Fixed
+        Gamepads.gamepad1.rightBumper whenBecomesTrue OuttakeNew.idleMode     // ✅ Fixed
     }
 
     override fun onUpdate() {
         tele.run {
-            addData("Hood Position ", Hood.hP)
-            addData("Power ", FlyWheel.targetVelocity)
-            addData("Distance in Tiles ", ImprovedOuttake.manualAim/24.0)
-            addData("turret", Turret.encoderOffset)
+            addLine("========== OUTTAKE STATUS ==========")
+            addData("Adjust Mode", OuttakeNew.adjustMode)
+            addData("Turret Mode", OuttakeNew.turretMode)
+            addLine()
+
+            addLine("========== SHOOTER VALUES ==========")
+            addData("Hood Position", "%.2f".format(Hood.hP))
+            addData("Target Velocity", FlyWheel.targetVelocity)
+            addData("Manual Aim Distance", "%.1f tiles".format(ImprovedOuttake.manualAim / 24.0))
+            addLine()
+
+            addLine("========== TURRET STATUS ==========")
+            addData("Turret Yaw", "%.2f°".format(Math.toDegrees(Turret.getYaw())))
+            addData("Absolute Yaw", "%.2f°".format(Math.toDegrees(Turret.getAbsoluteYaw())))
+            addData("Encoder Offset", "%.3f".format(Turret.encoderOffset))
+            addData("LL Auto-Aim", LLTurret.autoAimEnabled)
+            addLine()
+
+            addLine("========== DRIVETRAIN ==========")
+            addData("X", "%.1f".format(DriveTrain.currentX))
+            addData("Y", "%.1f".format(DriveTrain.currentY))
+            addData("Heading", "%.1f°".format(Math.toDegrees(DriveTrain.currentHeading)))
+            addData("In Shoot Zone", DriveTrain.inShootZone())
+
             update()
         }
     }

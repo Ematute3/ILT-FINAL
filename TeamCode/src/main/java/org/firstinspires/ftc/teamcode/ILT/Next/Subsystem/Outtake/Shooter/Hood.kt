@@ -20,7 +20,7 @@ object Hood: Subsystem {
         }
     val FlapDown = InstantCommand { hP += 0.05 }
     val FlapUp = InstantCommand { hP -= 0.05 }
-    val stopHood = InstantCommand{ hP = 0.0}
+    val hoodReset = InstantCommand{ hP = 0.0}
 
     fun getHoodPosition(){
       // if i got time add enum for this too

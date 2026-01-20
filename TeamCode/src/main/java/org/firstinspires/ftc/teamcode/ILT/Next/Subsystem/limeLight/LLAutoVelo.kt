@@ -1,113 +1,136 @@
 package org.firstinspires.ftc.teamcode.next.kotlin.subsystems
 
-import com.qualcomm.hardware.limelightvision.Limelight3A
 import dev.nextftc.core.subsystems.Subsystem
 import dev.nextftc.ftc.ActiveOpMode
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.limeLight.limeLight
 import kotlin.math.*
 
+// FIX: This subsystem should USE the shared limeLight instance, not create its own
 object LLAutoVelo : Subsystem {
 
-    // Here I’m declaring the Limelight camera object.
-    // I use “lateinit” because I’ll hook it up once the subsystem initializes.
-    lateinit var ll: Limelight3A
+    // FIX: Remove duplicate Limelight instance - use limeLight object instead
 
     // These are all the basic physical configuration values for the Limelight.
-    // They describe how and where it's mounted on the robot.
-    var llAngle = 9.895942           // This is the tilt angle of the Limelight in degrees.
-    var llLensHeight = 10.2756       // The height of the Limelight’s lens from the ground (in inches).
-    var goalHeight = 29.5            // The height of the scoring target we’re aiming for (in inches).
+    @JvmField var llAngle = 9.895942           // Tilt angle of the Limelight in degrees
+    @JvmField var llLensHeight = 10.2756       // Height of Limelight lens from ground (inches)
+    @JvmField var goalHeight = 29.5            // Height of scoring target (inches)
 
-    // These are constants for the physics calculations that estimate launch velocity.
-    private const val LAUNCH_ANGLE_DEG = 34.36        // The angle the ball leaves the shooter at.
-    private const val SHOOTER_HEIGHT_IN = 12.9774972441 // How high the shooter is from the ground.
-    private const val GOAL_HEIGHT_IN = 37.85           // The target goal height (probably top of the goal).
-    private const val GRAVITY_IN_PER_S2 = 386.0        // Gravity’s acceleration in inches per second squared.
-    private const val SHOOTER_DIAMETER_IN = 2.83465    // Diameter of the projectile.
-    private const val SHOOTER_RADIUS_IN = SHOOTER_DIAMETER_IN / 2.0  // Radius for velocity conversion.
+    // Physics calculation constants
+    private const val LAUNCH_ANGLE_DEG = 34.36
+    private const val SHOOTER_HEIGHT_IN = 12.9774972441
+    private const val GOAL_HEIGHT_IN = 37.85
+    private const val GRAVITY_IN_PER_S2 = 386.0
+    private const val SHOOTER_DIAMETER_IN = 2.83465
+    private const val SHOOTER_RADIUS_IN = SHOOTER_DIAMETER_IN / 2.0
 
-    // This is for the motor setup we’re using.
-    // For example, goBILDA 6000 RPM motors have 28 encoder ticks per revolution.
-    var motorTicksPerRev = 28.0
+    // Motor configuration
+    @JvmField var motorTicksPerRev = 28.0
 
-    // These variables help us calculate and track the robot's distance to the target.
-    var targetDistance = 24.0                   // The distance we want to shoot from.
-    var distanceTolerance = 3.0                 // Allowed distance difference margin (±3 inches).
-    var angleToGoalDegrees: Double = 0.0        // Vertical angle from Limelight in degrees.
-    var angleToGoalRadians: Double = 0.0        // Same angle converted to radians for trig math.
-    var distanceToGoal: Double? = null          // Computed distance (null if not detected yet).
-    var isAtTargetDistance: Boolean = false     // Whether we’re close enough to shoot from here.
-    var currentTy: Double = 0.0                 // Raw vertical offset from Limelight.
-    var hasValidTarget: Boolean = false         // Whether the Limelight sees a valid target.
+    // Distance tracking variables
+    @JvmField var targetDistance = 24.0
+    @JvmField var distanceTolerance = 3.0
 
-    // The calculated results go here once we compute how fast to spin the wheel.
-    var calculatedVelocity: Double = 0.0        // This is in ticks per second (for motor control).
-    var calculatedRPM: Double = 0.0             // This is the flywheel’s required RPM.
+    var angleToGoalDegrees: Double = 0.0
+        private set
+    var angleToGoalRadians: Double = 0.0
+        private set
 
-    // This sets up the Limelight when the subsystem starts running.
+    // FIX: Make properly nullable
+    var distanceToGoal: Double? = null
+        private set
+
+    var isAtTargetDistance: Boolean = false
+        private set
+
+    // FIX: Get these from shared limeLight object instead of duplicating
+    val currentTy: Double
+        get() = limeLight.currentTy
+
+    val hasValidTarget: Boolean
+        get() = limeLight.hasValidTarget
+
+    // Calculated results
+    var calculatedVelocity: Double = 0.0
+        private set
+    var calculatedRPM: Double = 0.0
+        private set
+
+    // FIX: No initialization needed - we use the shared limeLight instance
     override fun initialize() {
-        // We grab the Limelight from the hardware map so it connects to the physical camera.
-        ll = ActiveOpMode.hardwareMap.get(Limelight3A::class.java, "ll")
-        ll.setPollRateHz(100)   // Tells it to refresh data 100 times per second.
-        ll.pipelineSwitch(0)    // Uses pipeline 0 (could switch if more vision modes existed).
-        ll.start()              // Starts the Limelight feed.
+        // Check that limeLight is initialized
+        if (!limeLight.isReady()) {
+            ActiveOpMode.telemetry.addData("LLAutoVelo Warning", "limeLight not initialized")
+        }
     }
 
-    // This runs repeatedly while the robot code is active.
-    // It updates both the measured distance and the shooter speed calculation.
     override fun periodic() {
+        // FIX: Only run if limeLight is ready
+        if (!limeLight.isReady()) {
+            resetValues()
+            return
+        }
+
         updateDistanceCalculation()
         updateVelocityCalculation()
     }
 
-    // This function figures out how far the robot is from the target using the camera angle.
-    private fun updateDistanceCalculation() {
-        val result = ll.latestResult
-        if (result != null && result.isValid) {
-            hasValidTarget = true
-            val targetOffsetAngleVertical = result.ty // ty is the vertical aim offset.
-            currentTy = targetOffsetAngleVertical
+    // FIX: Add helper to reset all values
+    private fun resetValues() {
+        distanceToGoal = null
+        angleToGoalDegrees = 0.0
+        angleToGoalRadians = 0.0
+        isAtTargetDistance = false
+        calculatedVelocity = 0.0
+        calculatedRPM = 0.0
+    }
 
-            // The total vertical angle to the goal combines the Limelight mount angle and offset from TY.
+    private fun updateDistanceCalculation() {
+        // FIX: Use limeLight's data instead of separate instance
+        if (limeLight.hasValidTarget) {
+            val targetOffsetAngleVertical = limeLight.currentTy
+
             angleToGoalDegrees = llAngle + targetOffsetAngleVertical
             angleToGoalRadians = angleToGoalDegrees * (PI / 180.0)
 
-            // Use trigonometry to find the distance from the Limelight to the goal.
-            // tan(θ) = (height difference) / (distance)
-            distanceToGoal = (goalHeight - llLensHeight) / tan(angleToGoalRadians)
+            // FIX: Check for valid angle before calculating
+            if (abs(angleToGoalRadians) < PI / 2) {  // Prevent tan() from going to infinity
+                val tanAngle = tan(angleToGoalRadians)
+                if (abs(tanAngle) > 0.001) {  // Prevent division by near-zero
+                    distanceToGoal = (goalHeight - llLensHeight) / tanAngle
 
-            // Check if that measured distance is close enough to our desired target distance.
-            distanceToGoal?.let { dist ->
-                isAtTargetDistance = abs(dist - targetDistance) <= distanceTolerance
-            } ?: run {
+                    // Check if distance is reasonable (positive and not too far)
+                    distanceToGoal?.let { dist ->
+                        if (dist > 0 && dist < 200.0) {  // Sanity check
+                            isAtTargetDistance = abs(dist - targetDistance) <= distanceTolerance
+                        } else {
+                            distanceToGoal = null
+                            isAtTargetDistance = false
+                        }
+                    }
+                } else {
+                    distanceToGoal = null
+                    isAtTargetDistance = false
+                }
+            } else {
+                distanceToGoal = null
                 isAtTargetDistance = false
             }
         } else {
-            // If the Limelight doesn’t see a valid target, reset everything.
-            hasValidTarget = false
-            distanceToGoal = null
-            angleToGoalDegrees = 0.0
-            angleToGoalRadians = 0.0
-            isAtTargetDistance = false
-            currentTy = 0.0
+            resetValues()
         }
     }
 
-    // Once we know the distance, this uses physics to compute what velocity and RPM we need.
     private fun updateVelocityCalculation() {
         val distance = distanceToGoal
         if (distance != null && distance > 0) {
-            // If the distance makes sense, calculate how fast the shooter must spin.
             calculatedVelocity = calculateMotorVelocity(distance)
             calculatedRPM = calculateRPM(distance)
         } else {
-            // Otherwise, set them to zero.
             calculatedVelocity = 0.0
             calculatedRPM = 0.0
         }
     }
 
-    // This one specifically calculates the *shooter's required RPM* to make the shot.
-    // It uses some kinematic math based on the projectile motion formula.
     fun calculateRPM(distanceToTarget: Double): Double {
         val theta = Math.toRadians(LAUNCH_ANGLE_DEG)
         val cosTheta = cos(theta)
@@ -115,43 +138,30 @@ object LLAutoVelo : Subsystem {
 
         val heightDiff = GOAL_HEIGHT_IN - SHOOTER_HEIGHT_IN
 
-        // The formula below comes from projectile motion:
-        // v = sqrt(g * d^2 / (2 * cos^2(θ) * (d * tan(θ) - h)))
         val numerator = GRAVITY_IN_PER_S2 * distanceToTarget * distanceToTarget
         val denominator = 2.0 * cosTheta * cosTheta * (distanceToTarget * tanTheta - heightDiff)
 
-        // If denominator <= 0, that means the shot path is impossible.
+        // If denominator <= 0, shot path is impossible
         if (denominator <= 0) return 0.0
 
-        // Finds projectile exit speed needed (inches per second).
         val velocityInPerSec = sqrt(numerator / denominator)
-
-        // Convert that linear velocity to rotational speed in RPM.
-        // RPM = (velocity / (2πr)) * 60
         val rpm = 60.0 * velocityInPerSec / (2.0 * PI * SHOOTER_RADIUS_IN)
 
         return rpm
     }
 
-    // Now this turns the RPM into motor ticks per second (what the robot actually controls).
     fun calculateMotorVelocity(distanceToTarget: Double): Double {
         val rpm = calculateRPM(distanceToTarget)
         if (rpm == 0.0) return 0.0
 
-        // (Revs per second) * ticks per rev = ticks per second
         val ticksPerSec = (rpm / 60.0) * motorTicksPerRev
-
         return ticksPerSec
     }
 
-    // These next few are just simple getter functions so other parts of the robot can read the data.
-
-
-
-    // This prints detailed information for debugging — useful when tuning.
     fun getDistanceDebugInfo(): String {
         return buildString {
             appendLine("=== DISTANCE DEBUG ===")
+            appendLine("Limelight Ready: ${limeLight.isReady()}")
             appendLine("Valid Target: $hasValidTarget")
             appendLine("llAngle: $llAngle°")
             appendLine("TY: ${"%.2f".format(currentTy)}°")
@@ -160,7 +170,7 @@ object LLAutoVelo : Subsystem {
             appendLine("Goal Height: $goalHeight\"")
             appendLine("Lens Height: $llLensHeight\"")
             appendLine("Height Diff: ${goalHeight - llLensHeight}\"")
-            appendLine("tan(angle): ${"%.4f".format(Math.tan(angleToGoalRadians))}")
+            appendLine("tan(angle): ${"%.4f".format(tan(angleToGoalRadians))}")
             appendLine("Distance: ${distanceToGoal?.let { "%.2f".format(it) } ?: "N/A"}\"")
             appendLine()
             appendLine("=== VELOCITY CALCULATION ===")
@@ -173,10 +183,10 @@ object LLAutoVelo : Subsystem {
         }
     }
 
-    // This is what I’d show on the driver hub or telemetry to summarize all the info at a glance.
     fun getTelemetryString(): String {
         return buildString {
             appendLine("=== LIMELIGHT AUTO VELO ===")
+            appendLine("Limelight Ready: ${limeLight.isReady()}")
             appendLine("Valid Target: $hasValidTarget")
             if (hasValidTarget) {
                 appendLine("Distance: ${distanceToGoal?.let { "%.2f".format(it) } ?: "N/A"} inches")

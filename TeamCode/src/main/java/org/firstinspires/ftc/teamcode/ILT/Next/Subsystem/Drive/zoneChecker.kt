@@ -1,18 +1,37 @@
 package org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive
 
 import com.pedropathing.geometry.Pose
+import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.Alliance
 import kotlin.math.abs
 
 class ZoneChecker(
-    // gotta change this
+    private val alliance: Alliance,
     private val robotWidth: Double = 13.0,
     private val robotLength: Double = 13.0
 ) {
 
-    // Define field zones as triangles
-    private val obstacle = listOf(Pose(0.0, 115.0), Pose(25.0, 144.0), Pose(0.0, 141.0))
-    private val upper = listOf(Pose(0.0, 115.0), Pose(25.0, 144.0), Pose(72.0, 72.0))
-    private val lower = listOf(Pose(48.0, 0.0), Pose(72.0, 24.0), Pose(72.0, 0.0))
+    // FIX: Define zones that adjust based on alliance
+    // Red alliance uses these coordinates as-is
+    // Blue alliance mirrors across the field center (144/2 = 72)
+
+    private val redObstacle = listOf(Pose(0.0, 115.0), Pose(25.0, 144.0), Pose(0.0, 141.0))
+    private val redUpper = listOf(Pose(0.0, 115.0), Pose(25.0, 144.0), Pose(72.0, 72.0))
+    private val redLower = listOf(Pose(48.0, 0.0), Pose(72.0, 24.0), Pose(72.0, 0.0))
+
+    // Blue alliance zones (mirrored)
+    private val blueObstacle = listOf(Pose(144.0, 29.0), Pose(119.0, 0.0), Pose(144.0, 3.0))
+    private val blueUpper = listOf(Pose(144.0, 29.0), Pose(119.0, 0.0), Pose(72.0, 72.0))
+    private val blueLower = listOf(Pose(96.0, 144.0), Pose(72.0, 120.0), Pose(72.0, 144.0))
+
+    // Get current zones based on alliance
+    private val obstacle: List<Pose>
+        get() = if (alliance == Alliance.RED) redObstacle else blueObstacle
+
+    private val upper: List<Pose>
+        get() = if (alliance == Alliance.RED) redUpper else blueUpper
+
+    private val lower: List<Pose>
+        get() = if (alliance == Alliance.RED) redLower else blueLower
 
     // Check if point p is inside triangle defined by vertices a, b, c using barycentric coordinates
     private fun poseInTriangle(p: Pose, a: Pose, b: Pose, c: Pose): Boolean {
