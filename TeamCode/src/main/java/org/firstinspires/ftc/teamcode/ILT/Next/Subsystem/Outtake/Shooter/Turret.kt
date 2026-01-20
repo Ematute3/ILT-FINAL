@@ -81,10 +81,9 @@ object Turret: Subsystem {
             addData("turret Pos", getYaw())
         }
     }
-     fun autoAimLL(){
-        LLTurret.toggleAutoAimLL
+    fun autoAimLL(){
+        LLTurret.toggleAutoAimLL()  // Call it as a function
     }
-
 
 
     val zeroMotor = InstantCommand {

@@ -64,11 +64,6 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret){
     Hood.updatePosition(values2[0] + 0.06)
     FlyWheel.updatePid(values2[1] + 100)
     }
-    fun autoHoodFlyManual() {
-
-        Hood.updatePosition(values[0] + 0.06)
-        FlyWheel.updatePid(values[1] + 100)
-    }
 
     fun autoShoot() {
 
@@ -100,38 +95,38 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret){
     }
     fun aimDistance() {
         if (canSpin) {
-            when (manualAim) {
-                12 -> targetVelo = 835.0
-                24 -> targetVelo = 862.0
-                36 -> targetVelo = 844.0
-                48 -> targetVelo = 848.0
-                60 -> targetVelo = 908.0
-                72 -> targetVelo = 1025.0
-                84 -> targetVelo = 1165.0
-                96 -> targetVelo = 1230.0
-                108 -> targetVelo = 1070.0
-                120 -> targetVelo = 1112.0
-                132 -> targetVelo = 1150.0
-                144 -> targetVelo = 1250.0
-                else -> targetVelo = 0.0
+            targetVelo = when (manualAim) {
+                12 -> 835.0
+                24 -> 862.0
+                36 -> 844.0
+                48 -> 848.0
+                60 -> 908.0
+                72 -> 1025.0
+                84 -> 1165.0
+                96 -> 1230.0
+                108 -> 1070.0
+                120 -> 1112.0
+                132 -> 1150.0
+                144 -> 1250.0
+                else -> 0.0
             }
         }
 
 
-        when (manualAim) {
-            12 -> hP = 0.81
-            24 -> hP = 0.93
-            36 -> hP = 0.71
-            48 -> hP = 0.6
-            60 -> hP = 0.62
-            72 -> hP = 0.65
-            84 -> hP = 0.7
-            96 -> hP = 0.7
-            108 -> hP = 0.42
-            120 -> hP = 0.43
-            134 -> hP = 0.44
-            146 -> hP = 0.45
-            else -> hP = 0.0
+        hP = when (manualAim) {
+            12 -> 0.81
+            24 -> 0.93
+            36 -> 0.71
+            48 -> 0.6
+            60 -> 0.62
+            72 -> 0.65
+            84 -> 0.7
+            96 -> 0.7
+            108 -> 0.42
+            120 -> 0.43
+            134 -> 0.44
+            146 -> 0.45
+            else -> 0.0
         }
 
 

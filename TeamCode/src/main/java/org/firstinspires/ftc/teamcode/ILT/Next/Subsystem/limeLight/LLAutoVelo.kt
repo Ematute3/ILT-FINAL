@@ -145,17 +145,8 @@ object LLAutoVelo : Subsystem {
     }
 
     // These next few are just simple getter functions so other parts of the robot can read the data.
-    fun getDistanceToTarget(): Double? {
-        return distanceToGoal
-    }
 
-    fun getCalculatedVelocity(): Double {
-        return calculatedVelocity
-    }
 
-    fun getCalculatedRPM(): Double {
-        return calculatedRPM
-    }
 
     // This prints detailed information for debugging — useful when tuning.
     fun getDistanceDebugInfo(): String {

@@ -10,7 +10,7 @@ import dev.nextftc.hardware.impl.ServoEx
 
 object Hood: Subsystem {
 
-     val hS = ServoEx("flap")
+     val hS = ServoEx("hood")
 
 
      var hP = 0.0
@@ -20,6 +20,7 @@ object Hood: Subsystem {
         }
     val FlapDown = InstantCommand { hP += 0.05 }
     val FlapUp = InstantCommand { hP -= 0.05 }
+    val stopHood = InstantCommand{ hP = 0.0}
 
     fun getHoodPosition(){
       // if i got time add enum for this too

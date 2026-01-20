@@ -18,10 +18,10 @@ import kotlin.time.Duration.Companion.seconds
 
 object FlyWheel: Subsystem {
 
-    val f1 = MotorEx("f1M")
+    val f1 = MotorEx("fly1")
 
 
-    val f2 = MotorEx("f2M").reversed()
+    val f2 = MotorEx("fly2").reversed()
 
 // i needa tune this
     @JvmField

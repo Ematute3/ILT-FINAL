@@ -5,6 +5,7 @@ enum class TurretMode {
     IDLE, // does jack
     LL_AIM, // aims using ll
     MANUAL_AIM, // uses the motor
-    ENCODER_AIM // uses the encoder.
+    ENCODER_AIM, // uses the encoder.
+    PEDRO_AIM
 
 }
