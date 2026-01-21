@@ -2,45 +2,53 @@ package org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive
 
 import com.pedropathing.control.PIDFController
 import com.pedropathing.math.MathFunctions
-import dev.nextftc.extensions.pedro.PedroComponent.Companion.follower
+import dev.nextftc.extensions.pedro.PedroComponent
 import dev.nextftc.hardware.driving.DriverControlledCommand
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.ImprovedOuttake
 import java.util.function.Supplier
 import kotlin.math.atan2
 
-class headingLock @JvmOverloads constructor(
+class HeadingLock @JvmOverloads constructor(
     drivePower: Supplier<Double>,
     strafePower: Supplier<Double>,
     turnPower: Supplier<Double>,
     private val robotCentric: Boolean = false
 ) : DriverControlledCommand(drivePower, strafePower, turnPower) {
 
-    lateinit var controller: PIDFController
+    private var controller: PIDFController? = null
     var headingLock: Boolean = false
 
-    // FIX: Remove hardcoded goal, use ImprovedOuttake's goal instead
+    // Allow custom goal override, otherwise use ImprovedOuttake's goal
     private var customGoalX: Double? = null
     private var customGoalY: Double? = null
 
     override fun start() {
-        controller = PIDFController(follower.constants.coefficientsHeadingPIDF)
-        follower.startTeleopDrive()
+        // Safe initialization with null check
+        PedroComponent.follower?.let { follower ->
+            controller = PIDFController(follower.constants.coefficientsHeadingPIDF)
+            follower.startTeleopDrive()
+        }
     }
 
     override fun calculateAndSetPowers(powers: DoubleArray) {
         val (drive, strafe, turn) = powers
+        val follower = PedroComponent.follower
 
-        // FIX: Update coefficients in case they changed
-        controller.setCoefficients(follower.constants.coefficientsHeadingPIDF)
+        // If follower not initialized, can't do anything
+        if (follower == null) {
+            return
+        }
 
-        if (headingLock) {
-            // FIX: Only update error if we have a valid pose
+        // Update coefficients in case they changed
+        controller?.setCoefficients(follower.constants.coefficientsHeadingPIDF)
+
+        if (headingLock && controller != null) {
             try {
-                controller.updateError(getHeadingError())
+                controller!!.updateError(getHeadingError())
                 follower.setTeleOpDrive(
                     drive,
                     strafe,
-                    controller.run(),
+                    controller!!.run(),
                     robotCentric
                 )
             } catch (e: Exception) {
@@ -53,11 +61,17 @@ class headingLock @JvmOverloads constructor(
     }
 
     override fun stop(interrupted: Boolean) {
-        if (interrupted) follower.breakFollowing()
+        if (interrupted) {
+            PedroComponent.follower?.breakFollowing()
+        }
     }
 
-    // FIX: Use ImprovedOuttake's goal or custom goal instead of hardcoded values
+    /**
+     * Calculate heading error to face the goal.
+     * Uses custom goal if set, otherwise uses ImprovedOuttake's goal.
+     */
     fun getHeadingError(): Double {
+        val follower = PedroComponent.follower ?: return 0.0
         val currentPose = follower.pose
 
         // Use custom goal if set, otherwise use ImprovedOuttake's goal
@@ -77,15 +91,26 @@ class headingLock @JvmOverloads constructor(
         return headingError
     }
 
-    // FIX: Allow setting custom goal for heading lock
+    /**
+     * Set a custom goal for heading lock (useful for aiming at specific targets).
+     */
     fun setCustomGoal(x: Double, y: Double) {
         customGoalX = x
         customGoalY = y
     }
 
-    // Clear custom goal and use ImprovedOuttake's goal
+    /**
+     * Clear custom goal and revert to using ImprovedOuttake's goal.
+     */
     fun clearCustomGoal() {
         customGoalX = null
         customGoalY = null
+    }
+
+    /**
+     * Check if heading lock can function (follower initialized).
+     */
+    fun canHeadingLock(): Boolean {
+        return PedroComponent.follower != null && controller != null
     }
 }

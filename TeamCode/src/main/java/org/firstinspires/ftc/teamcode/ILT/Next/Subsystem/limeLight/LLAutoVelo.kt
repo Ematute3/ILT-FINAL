@@ -11,16 +11,18 @@ object LLAutoVelo : Subsystem {
     // FIX: Remove duplicate Limelight instance - use limeLight object instead
 
     // These are all the basic physical configuration values for the Limelight.
-    @JvmField var llAngle = 9.895942           // Tilt angle of the Limelight in degrees
-    @JvmField var llLensHeight = 10.2756       // Height of Limelight lens from ground (inches)
-    @JvmField var goalHeight = 29.5            // Height of scoring target (inches)
+    @JvmField var llAngle = 10.0           // Tilt angle of the Limelight in degrees
+    @JvmField var llLensHeight = 12.9760551181102// Height of Limelight lens from ground (inches)
+    @JvmField var goalHeight = 39.5            // Height of scoring target (inches)
 
     // Physics calculation constants
     private const val LAUNCH_ANGLE_DEG = 34.36
-    private const val SHOOTER_HEIGHT_IN = 12.9774972441
-    private const val GOAL_HEIGHT_IN = 37.85
+    // min 33.767
+    // max 70 ish
+    private const val SHOOTER_HEIGHT_IN = 12.4462122047
+    private const val GOAL_HEIGHT_IN = 39.5
     private const val GRAVITY_IN_PER_S2 = 386.0
-    private const val SHOOTER_DIAMETER_IN = 2.83465
+    private const val SHOOTER_DIAMETER_IN = 6.0
     private const val SHOOTER_RADIUS_IN = SHOOTER_DIAMETER_IN / 2.0
 
     // Motor configuration
@@ -28,7 +30,7 @@ object LLAutoVelo : Subsystem {
 
     // Distance tracking variables
     @JvmField var targetDistance = 24.0
-    @JvmField var distanceTolerance = 3.0
+    @JvmField var distanceTolerance = 1.5
 
     var angleToGoalDegrees: Double = 0.0
         private set
@@ -42,7 +44,7 @@ object LLAutoVelo : Subsystem {
     var isAtTargetDistance: Boolean = false
         private set
 
-    // FIX: Get these from shared limeLight object instead of duplicating
+    // FIX:7 Get these from shared limeLight object instead of duplicating
     val currentTy: Double
         get() = limeLight.currentTy
 

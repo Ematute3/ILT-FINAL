@@ -4,7 +4,6 @@ import com.bylazar.telemetry.JoinedTelemetry
 import com.bylazar.telemetry.PanelsTelemetry
 import com.pedropathing.geometry.Pose
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
-import dev.nextftc.control.KineticState
 import dev.nextftc.core.components.BindingsComponent
 import dev.nextftc.core.components.SubsystemComponent
 import dev.nextftc.extensions.pedro.PedroComponent.Companion.follower
@@ -24,32 +23,32 @@ import org.firstinspires.ftc.teamcode.next.kotlin.subsystems.LLAutoVelo
 import org.firstinspires.ftc.teamcode.next.kotlin.subsystems.LLTurret
 
 @TeleOp(name = "Outtake Test", group = "Test")
-class OuttakeTest: NextFTCOpMode() {
+class OuttakeTest : NextFTCOpMode() {
 
     init {
-        // FIX: Add ALL required subsystems in correct order
         addComponents(
             SubsystemComponent(
-                DriveTrain,      // Must be first
-                limeLight,       // Second for vision
-                Turret,          // Shooter components
+                DriveTrain,
+                limeLight,
+                Turret,
                 FlyWheel,
                 Hood,
                 Intake,
-                LLAutoVelo,      // Vision processing
-                LLTurret,        // Vision-based turret control
-                ImprovedOuttake, // Coordination
-                OuttakeNew       // Main controller
+                LLAutoVelo,
+                LLTurret,
+                ImprovedOuttake,
+                OuttakeNew
             ),
             BindingsComponent,
             BulkReadComponent
         )
     }
 
-    var tele = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, telemetry)
+    private lateinit var tele: JoinedTelemetry
 
     override fun onInit() {
-        // FIX: Initialize all subsystems in correct order
+        tele = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, telemetry)
+
         DriveTrain.setAlliance(Alliance.RED)
         DriveTrain.initialize()
         limeLight.initialize()
@@ -57,7 +56,6 @@ class OuttakeTest: NextFTCOpMode() {
         LLAutoVelo.initialize()
         ImprovedOuttake.initialize()
 
-        // Set starting pose
         follower.setStartingPose(Pose(144.0 - 36.0, 6.5, Math.PI / 2))
 
         telemetry.addLine("Outtake Test Initialized")
@@ -76,68 +74,56 @@ class OuttakeTest: NextFTCOpMode() {
     }
 
     override fun onStartButtonPressed() {
-        // FIX: Proper mode switching with .schedule()
-        Gamepads.gamepad1.a whenBecomesTrue {
-            OuttakeNew.manualMode.schedule()
-        }
+        // Mode switching
+        val manualModeBtn = Gamepads.gamepad1.a
+        manualModeBtn.whenBecomesTrue { OuttakeNew.manualMode.schedule() }
 
-        Gamepads.gamepad1.b whenBecomesTrue {
-            OuttakeNew.autoModeManual.schedule()
-        }
+        val autoModeManualBtn = Gamepads.gamepad1.b
+        autoModeManualBtn.whenBecomesTrue { OuttakeNew.autoModeManual.schedule() }
 
-        Gamepads.gamepad1.x whenBecomesTrue {
-            OuttakeNew.autoModeLL.schedule()
-        }
+        val autoModeLLBtn = Gamepads.gamepad1.x
+        autoModeLLBtn.whenBecomesTrue { OuttakeNew.autoModeLL.schedule() }
 
-        // FIX: Y button for idle
-        Gamepads.gamepad1.y whenBecomesTrue {
-            OuttakeNew.idleMode.schedule()
-        }
+        val idleModeBtn = Gamepads.gamepad1.y
+        idleModeBtn.whenBecomesTrue { OuttakeNew.idleMode.schedule() }
 
-        // Manual controls (work in manual mode)
-        Gamepads.gamepad2.dpadUp whenBecomesTrue {
-            ImprovedOuttake.aimUp.schedule()
-        }
+        // Manual aim controls
+        val aimUp = Gamepads.gamepad2.dpadUp
+        aimUp.whenBecomesTrue { ImprovedOuttake.aimUp.schedule() }
 
-        Gamepads.gamepad2.dpadDown whenBecomesTrue {
-            ImprovedOuttake.aimDown.schedule()
-        }
+        val aimDown = Gamepads.gamepad2.dpadDown
+        aimDown.whenBecomesTrue { ImprovedOuttake.aimDown.schedule() }
 
-        Gamepads.gamepad2.rightBumper whenBecomesTrue {
-            Turret.spinGearRight.schedule()
-        } whenBecomesFalse {
-            Turret.stopGear.schedule()
-        }
+        // Turret controls
+        val turretRight = Gamepads.gamepad2.rightBumper
+        turretRight.whenBecomesTrue { Turret.spinGearRight.schedule() }
+        turretRight.whenBecomesFalse { Turret.stopGear.schedule() }
 
-        Gamepads.gamepad2.leftBumper whenBecomesTrue {
-            Turret.spinGearLeft.schedule()
-        } whenBecomesFalse {
-            Turret.stopGear.schedule()
-        }
+        val turretLeft = Gamepads.gamepad2.leftBumper
+        turretLeft.whenBecomesTrue { Turret.spinGearLeft.schedule() }
+        turretLeft.whenBecomesFalse { Turret.stopGear.schedule() }
 
         // Shooter controls
-        Gamepads.gamepad2.rightTrigger.greaterThan(0.5) whenBecomesTrue {
-            FlyWheel.spin.schedule()
-        }  whenBecomesFalse {
-            FlyWheel.stop.schedule()
-        }
+        val flywheelTrigger = Gamepads.gamepad2.rightTrigger.greaterThan(0.5)
+        flywheelTrigger.whenBecomesTrue { FlyWheel.spin.schedule() }
+        flywheelTrigger.whenBecomesFalse { FlyWheel.stop.schedule() }
 
         // Intake controls
-        Gamepads.gamepad2.leftTrigger.greaterThan(0.5) whenBecomesTrue {
-            Intake.runIntake.schedule()
-        } whenBecomesFalse {
-            Intake.stopIntake.schedule()
-        }
+        val intakeTrigger = Gamepads.gamepad2.leftTrigger.greaterThan(0.5)
+        intakeTrigger.whenBecomesTrue { Intake.runIntake.schedule() }
+        intakeTrigger.whenBecomesFalse { Intake.stopIntake.schedule() }
 
         // Emergency stop
-        Gamepads.gamepad2.back whenBecomesTrue {
+        val emergencyStop = Gamepads.gamepad2.back
+        emergencyStop.whenBecomesTrue {
             OuttakeNew.idleMode.schedule()
             FlyWheel.stop.schedule()
             Intake.stopIntake.schedule()
         }
 
-        // Test full auto shoot sequence
-        Gamepads.gamepad2.start whenBecomesTrue {
+        // Full auto shoot
+        val fullAutoShoot = Gamepads.gamepad2.start
+        fullAutoShoot.whenBecomesTrue {
             if (OuttakeNew.canUseAutoModes()) {
                 ImprovedOuttake.fullAutoShootSequence.schedule()
             }

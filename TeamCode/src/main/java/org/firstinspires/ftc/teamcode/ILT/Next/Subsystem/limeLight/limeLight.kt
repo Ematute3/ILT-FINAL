@@ -10,7 +10,6 @@ import org.firstinspires.ftc.teamcode.next.subsystems.data.Motif
 
 object limeLight : Subsystem {
 
-    // FIX: Make nullable for safe initialization
     private var ll: Limelight3A? = null
 
     // FIX: Add initialization flag

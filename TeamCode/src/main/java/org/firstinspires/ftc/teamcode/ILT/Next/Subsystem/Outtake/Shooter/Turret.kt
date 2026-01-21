@@ -29,13 +29,10 @@ object Turret: Subsystem {
     private val gearRatio = 3.62068965517 // 105/29
 
     @JvmField
-    var autoTurret = true
-
-    @JvmField
     var turretPID = PIDCoefficients(0.011, 0.0, 0.2)
 
     // FIX: Add flag to track if we've warned about missing pose
-    private var hasWarnedAboutPose = false
+
 
     override fun initialize() {
         try {
@@ -85,17 +82,6 @@ object Turret: Subsystem {
     val stopGear = InstantCommand { gP = 0.0 }
 
     fun autoAim() {
-        // FIX: Check if pose is valid before using it
-        if (!DriveTrain.isPoseValid()) {
-            if (!hasWarnedAboutPose) {
-                ActiveOpMode.telemetry.addData("Turret Warning", "Pose not initialized, cannot auto-aim")
-                hasWarnedAboutPose = true
-            }
-            turret.power = 0.0
-            return
-        }
-
-        hasWarnedAboutPose = false // Reset warning flag
 
         // FIX: Use DriveTrain object properties instead of direct imports
         val mu = atan2(goalY - DriveTrain.currentY, goalX - DriveTrain.currentX)
@@ -167,16 +153,6 @@ object Turret: Subsystem {
             return
         }
 
-        if (!DriveTrain.isPoseValid()) {
-            if (!hasWarnedAboutPose) {
-                ActiveOpMode.telemetry.addData("Turret Warning", "Pose not initialized, cannot auto-aim")
-                hasWarnedAboutPose = true
-            }
-            turret.power = 0.0
-            return
-        }
-
-        hasWarnedAboutPose = false
 
         val mu = atan2(goalY - DriveTrain.currentY, goalX - DriveTrain.currentX)
         val deltaHeading = normalizeAngle(mu - DriveTrain.currentHeading)
@@ -196,3 +172,7 @@ object Turret: Subsystem {
         turret.power = turretController.calculate(KineticState(getAbsoluteYaw(), 0.0))
     }
 }
+/*
+1. relative motor encoder
+ a. read encoder
+ */

@@ -14,22 +14,11 @@ import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.Alliance
 @Configurable
 object DriveTrain: Subsystem {
 
-    // IMU for robot heading (Pedro uses this internally)
-    val imu = IMUEx("imu", Direction.RIGHT, Direction.UP)
 
-    // Alliance color - MUST be set during initialization
+    val imu = IMUEx("imu", Direction.RIGHT,  Direction.UP)
     @JvmField var alliance = Alliance.RED
-
-    // Zone checker for determining if robot is in shooting zone
     private lateinit var zoneChecker: ZoneChecker
-
-    // Sensitivity multiplier for driver control (optional)
-    @JvmField var sensitivity = 1.0
-
-    // FIX: Add initialization flag to prevent usage before ready
     private var poseInitialized = false
-
-    // Current pose values from Pedro odometry
     var currentX = 0.0
         private set
     var currentY = 0.0
@@ -38,12 +27,9 @@ object DriveTrain: Subsystem {
         private set
 
     override fun initialize() {
-        // Initialize zone checker based on alliance
-        zoneChecker = ZoneChecker(alliance, 16.0, 16.0)
-        poseInitialized = false
 
-        // Optional: Set alliance from OpMode if needed
-        // alliance = (ActiveOpMode.opMode as? YourBaseOpMode)?.alliance ?: Alliance.RED
+        zoneChecker = ZoneChecker( 16.0, 16.0)
+        poseInitialized = false
     }
 
     override val defaultCommand: Command
@@ -56,7 +42,7 @@ object DriveTrain: Subsystem {
 
     override fun periodic() {
         // FIX: Update current position from Pedro follower with proper error handling
-        PedroComponent.follower?.let { follower ->
+        PedroComponent.follower.let { follower ->
             try {
                 currentX = follower.pose.x
                 currentY = follower.pose.y
@@ -66,10 +52,6 @@ object DriveTrain: Subsystem {
                 ActiveOpMode.telemetry.addData("DriveTrain Error", e.message)
                 poseInitialized = false
             }
-        } ?: run {
-            // Follower not initialized yet
-            poseInitialized = false
-            ActiveOpMode.telemetry.addData("Warning", "Pedro follower not initialized")
         }
 
         // Optional: Add telemetry for debugging
@@ -85,7 +67,7 @@ object DriveTrain: Subsystem {
 
     // FIX: Add safety check for pose validity
     fun isPoseValid(): Boolean {
-        return poseInitialized && PedroComponent.follower != null
+        return poseInitialized
     }
 
     fun inShootZone(): Boolean {
@@ -103,10 +85,11 @@ object DriveTrain: Subsystem {
     fun setAlliance(newAlliance: Alliance) {
         alliance = newAlliance
         // FIX: Pass alliance to zone checker
-        zoneChecker = ZoneChecker(alliance, 16.0, 16.0)
+        zoneChecker = ZoneChecker( 16.0, 16.0)
     }
 
     // FIX: Helper function to get current pose safely
+    // use this for telemetry
     fun getPose(): Triple<Double, Double, Double>? {
         return if (isPoseValid()) {
             Triple(currentX, currentY, currentHeading)

@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake
 
+import dev.nextftc.core.commands.Command
 import dev.nextftc.core.commands.delays.Delay
 import dev.nextftc.core.commands.groups.SequentialGroup
 import dev.nextftc.core.commands.utility.InstantCommand
@@ -18,9 +19,8 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.seconds
 
-object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
+object ImprovedOuttake : SubsystemGroup(FlyWheel, Hood, Turret) {
 
-    // FIX: Use var so it can update
     var goalX = 0.0
         private set
 
@@ -37,7 +37,7 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
         }
     }
 
-    // FIX: Make these computed properties that calculate fresh values each time
+    // Computed properties that calculate fresh values each time
     val distanceToGoalOdometry: Double
         get() {
             if (!DriveTrain.isPoseValid()) return 0.0
@@ -48,7 +48,7 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
         }
 
     val distanceToGoalLimelight: Double?
-        get() = LLAutoVelo.distanceToGoal  // FIX: Keep nullable, don't force unwrap
+        get() = LLAutoVelo.distanceToGoal
 
     val distanceDifference: Double
         get() {
@@ -60,7 +60,6 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
             }
         }
 
-    // FIX: Make these functions that calculate fresh each time
     fun getOdometryAimValues(): DoubleArray? {
         if (!DriveTrain.isPoseValid()) return null
         return Aimbot.getValues(distanceToGoalOdometry)
@@ -71,7 +70,6 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
         return Aimbot.getValues(llDist)
     }
 
-    // FIX: Safe Limelight-based adjustment
     fun autoHoodFlyLL() {
         val values = getLimelightAimValues()
         if (values != null) {
@@ -82,7 +80,6 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
         }
     }
 
-    // FIX: Safe odometry-based adjustment
     fun autoShoot() {
         if (!DriveTrain.isPoseValid()) {
             ActiveOpMode.telemetry.addData("Auto Shoot", "Pose not valid")
@@ -94,7 +91,6 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
             if (values != null) {
                 Hood.updatePosition(values[0] + 0.06)
                 FlyWheel.updatePid(values[1] + 100)
-                // Note: This doesn't actually shoot, just sets up the parameters
             } else {
                 ActiveOpMode.telemetry.addData("Auto Shoot", "No aim values")
             }
@@ -107,11 +103,12 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
     var targetVelo = 0.0
         private set
 
-    @JvmField var manualAim = 0
+    @JvmField
+    var manualAim = 0
 
     val aimUp = InstantCommand {
         manualAim += 12
-        if (manualAim > 146) manualAim = 146
+        if (manualAim > 144) manualAim = 144
     }
 
     val aimDown = InstantCommand {
@@ -123,7 +120,8 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
         manualAim = 0
     }
 
-    @JvmField var canSpin = true
+    @JvmField
+    var canSpin = true
 
     fun manualAim() {
         if (mode == OuttakeMode.MANUAL_ADJUST) {
@@ -134,14 +132,13 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
     }
 
     fun aimDistance() {
-        // Snap to nearest valid value
+        // Snap to nearest valid value (multiples of 12)
         if (manualAim % 12 != 0) {
             manualAim -= manualAim % 12
         }
 
         // Clamp to valid range
-        if (manualAim > 146) manualAim = 146
-        else if (manualAim < 12) manualAim = 12
+        manualAim = manualAim.coerceIn(12, 144)
 
         // Set velocity based on distance
         if (canSpin) {
@@ -174,23 +171,27 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
             96 -> 0.7
             108 -> 0.42
             120 -> 0.43
-            132 -> 0.44  // FIX: Was 134
-            144 -> 0.45  // FIX: Was 146
+            132 -> 0.44
+            144 -> 0.45
             else -> 0.0
         }
     }
 
-    // FIX: Add complete shooting sequence with safety checks
+    /**
+     * Non-blocking command that waits for flywheel to reach target velocity.
+     * Uses NextFTC's command system properly instead of Thread.sleep.
+     */
+
+
+    // Proper non-blocking shooting sequence
     val fullAutoShootSequence = SequentialGroup(
-        // Check we're ready
+        // Check prerequisites
         InstantCommand {
             if (!DriveTrain.isPoseValid()) {
                 ActiveOpMode.telemetry.addData("Shoot Sequence", "Aborting - no pose")
-                return@InstantCommand
             }
             if (!DriveTrain.inShootZone()) {
                 ActiveOpMode.telemetry.addData("Shoot Sequence", "Not in shoot zone")
-                return@InstantCommand
             }
         },
 
@@ -199,16 +200,9 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
 
         // Spin up flywheel
         FlyWheel.spin,
-        Delay(0.5.seconds),
 
-        // Wait for flywheel to reach speed
-        InstantCommand {
-            var attempts = 0
-            while (!FlyWheel.isAtTargetVelocity() && attempts < 100) {
-                Thread.sleep(10)
-                attempts++
-            }
-        },
+        // Wait for flywheel (non-blocking!)
+        WaitForFlywheelSpeed(),
 
         // Feed the ball
         Intake.feedShooter,
@@ -219,8 +213,17 @@ object ImprovedOuttake: SubsystemGroup(FlyWheel, Hood, Turret) {
         Intake.stopIntake
     )
 
+    // Simpler shoot sequence for autonomous (assumes already aimed)
+    val shootSequence = SequentialGroup(
+        FlyWheel.spin,
+        WaitForFlywheelSpeed(),
+        Intake.feedShooter,
+        Delay(0.4.seconds),
+        FlyWheel.stop,
+        Intake.stopIntake
+    )
+
     override fun periodic() {
-        // Add telemetry for debugging
         ActiveOpMode.telemetry.run {
             addData("Outtake Mode", mode)
             addData("Goal Position", "(%.1f, %.1f)".format(goalX, goalY))

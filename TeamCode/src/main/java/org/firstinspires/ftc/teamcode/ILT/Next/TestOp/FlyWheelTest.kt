@@ -20,13 +20,12 @@ import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Hood
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret
 
 @TeleOp(name = "Flywheel Test", group = "Test")
-class FlywheelTest: NextFTCOpMode() {
+class FlywheelTest : NextFTCOpMode() {
 
     init {
-        // FIX: Add all required subsystems
         addComponents(
             SubsystemComponent(
-                DriveTrain,      // Required for ImprovedOuttake
+                DriveTrain,
                 FlyWheel,
                 Hood,
                 Turret,
@@ -38,18 +37,16 @@ class FlywheelTest: NextFTCOpMode() {
         )
     }
 
-    var tele = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, telemetry)
+    private lateinit var tele: JoinedTelemetry
 
     override fun onInit() {
-        // FIX: Initialize DriveTrain first
+        tele = JoinedTelemetry(PanelsTelemetry.ftcTelemetry, telemetry)
+
         DriveTrain.setAlliance(Alliance.RED)
         DriveTrain.initialize()
-
-        // Initialize other subsystems
         Turret.initialize()
         ImprovedOuttake.initialize()
 
-        // Set starting pose for Pedro
         follower.setStartingPose(Pose(144.0 - 36.0, 6.5, Math.PI / 2))
 
         telemetry.addLine("Flywheel Test Initialized")
@@ -59,35 +56,39 @@ class FlywheelTest: NextFTCOpMode() {
         telemetry.addLine("  Cross - Full shoot sequence")
         telemetry.addLine("  DPad Up - Zero turret encoder")
         telemetry.addLine("  RB/LB - Turret manual control")
+        telemetry.addLine("  GP2 DPad Up/Down - Adjust velocity")
         telemetry.update()
     }
 
     override fun onStartButtonPressed() {
-        // FIX: Use .schedule() for all commands
-        Gamepads.gamepad1.x whenBecomesTrue { FlyWheel.spin.schedule() }
-        Gamepads.gamepad1.y whenBecomesTrue { FlyWheel.stop.schedule() }
-        Gamepads.gamepad1.cross whenBecomesTrue { FlyWheel.Shoot.schedule() }
-        Gamepads.gamepad1.dpadUp whenBecomesTrue { Turret.zeroMotor.schedule() }
+        // Flywheel controls
+        val spinFlywheel = Gamepads.gamepad1.x
+        spinFlywheel.whenBecomesTrue { FlyWheel.spin.schedule() }
 
-        Gamepads.gamepad2.rightBumper whenBecomesTrue {
-            Turret.spinGearRight.schedule()
-        } whenBecomesFalse {
-            Turret.stopGear.schedule()
-        }
+        val stopFlywheel = Gamepads.gamepad1.y
+        stopFlywheel.whenBecomesTrue { FlyWheel.stop.schedule() }
 
-        Gamepads.gamepad2.leftBumper whenBecomesTrue {
-            Turret.spinGearLeft.schedule()
-        } whenBecomesFalse {
-            Turret.stopGear.schedule()
-        }
+        val shootSequence = Gamepads.gamepad1.cross
+        shootSequence.whenBecomesTrue { FlyWheel.Shoot.schedule() }
 
-        // FIX: Add velocity adjustment controls
-        Gamepads.gamepad2.dpadUp whenBecomesTrue {
-            FlyWheel.targetVelocity += 50
-        }
-        Gamepads.gamepad2.dpadDown whenBecomesTrue {
-            FlyWheel.targetVelocity -= 50
-        }
+        // Turret controls
+        val zeroTurret = Gamepads.gamepad1.dpadUp
+        zeroTurret.whenBecomesTrue { Turret.zeroMotor.schedule() }
+
+        val turretRight = Gamepads.gamepad2.rightBumper
+        turretRight.whenBecomesTrue { Turret.spinGearRight.schedule() }
+        turretRight.whenBecomesFalse { Turret.stopGear.schedule() }
+
+        val turretLeft = Gamepads.gamepad2.leftBumper
+        turretLeft.whenBecomesTrue { Turret.spinGearLeft.schedule() }
+        turretLeft.whenBecomesFalse { Turret.stopGear.schedule() }
+
+        // Velocity adjustment
+        val veloUp = Gamepads.gamepad2.dpadUp
+        veloUp.whenBecomesTrue { FlyWheel.targetVelocity += 50 }
+
+        val veloDown = Gamepads.gamepad2.dpadDown
+        veloDown.whenBecomesTrue { FlyWheel.targetVelocity -= 50 }
     }
 
     override fun onUpdate() {
@@ -102,7 +103,6 @@ class FlywheelTest: NextFTCOpMode() {
             addData("Flywheels On", FlyWheel.flywheelsOn)
             addData("At Speed", FlyWheel.isAtTargetVelocity())
 
-            // FIX: Create state from current values instead of accessing .state
             val currentState = KineticState(FlyWheel.f1.currentPosition.toDouble(), FlyWheel.f1.velocity)
             addData("Controller Output", "%.3f".format(
                 FlyWheel.flywheelController.calculate(currentState)
@@ -129,7 +129,6 @@ class FlywheelTest: NextFTCOpMode() {
             addLine("=== TARGETING ===")
             addData("Goal X", "%.1f".format(ImprovedOuttake.goalX))
             addData("Goal Y", "%.1f".format(ImprovedOuttake.goalY))
-            // FIX: Use computed properties correctly
             addData("Distance (Odom)", "%.1f".format(ImprovedOuttake.distanceToGoalOdometry))
             addData("Distance (LL)", ImprovedOuttake.distanceToGoalLimelight?.let {
                 "%.1f".format(it)

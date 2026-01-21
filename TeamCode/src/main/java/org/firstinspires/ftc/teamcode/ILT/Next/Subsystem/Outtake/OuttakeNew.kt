@@ -12,7 +12,7 @@ import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.limeLight.limeLight
 import org.firstinspires.ftc.teamcode.next.kotlin.subsystems.LLTurret
 
-object OuttakeNew: Subsystem {
+object OuttakeNew : Subsystem {
 
     var adjustMode: OuttakeMode = OuttakeMode.IDLE
         private set
@@ -20,16 +20,26 @@ object OuttakeNew: Subsystem {
     var turretMode: TurretMode = TurretMode.IDLE
         private set
 
-    // FIX: Track if we've enabled LL aim to prevent toggling
+    // Track if we've enabled LL aim to prevent toggling every frame
     private var llAimWasEnabled = false
 
+    // Track previous mode to detect changes (prevents repeated actions)
+    private var previousAdjustMode: OuttakeMode? = null
+    private var previousTurretMode: TurretMode? = null
+
     override fun periodic() {
+        // Detect mode changes for one-time actions
+        val adjustModeChanged = adjustMode != previousAdjustMode
+        val turretModeChanged = turretMode != previousTurretMode
+
         // Handle outtake adjustment modes
-        when(adjustMode) {
+        when (adjustMode) {
             OuttakeMode.IDLE -> {
-                // Stop all adjustment
-                Hood.hoodReset.schedule()
-                Intake.stopIntake.schedule()
+                // Only reset once when entering IDLE mode
+                if (adjustModeChanged) {
+                    Hood.hP = 0.0
+                    Intake.iP = 0.0
+                }
             }
 
             OuttakeMode.MANUAL_ADJUST -> {
@@ -38,7 +48,6 @@ object OuttakeNew: Subsystem {
             }
 
             OuttakeMode.AUTO_ADJUST_MANUAL -> {
-                // FIX: Only run if pose is valid
                 if (DriveTrain.isPoseValid()) {
                     ImprovedOuttake.autoShoot()
                 } else {
@@ -47,7 +56,6 @@ object OuttakeNew: Subsystem {
             }
 
             OuttakeMode.AUTO_ADJUST_LL -> {
-                // FIX: Only run if Limelight is ready
                 if (limeLight.isReady() && limeLight.hasValidTarget) {
                     ImprovedOuttake.autoHoodFlyLL()
                 } else {
@@ -57,11 +65,11 @@ object OuttakeNew: Subsystem {
         }
 
         // Handle turret aiming modes
-        when(turretMode) {
+        when (turretMode) {
             TurretMode.IDLE -> {
                 // Stop turret movement
                 Turret.turret.power = 0.0
-                // FIX: Disable LL aim if it was enabled
+                // Disable LL aim if it was enabled
                 if (llAimWasEnabled) {
                     LLTurret.autoAimEnabled = false
                     llAimWasEnabled = false
@@ -69,14 +77,13 @@ object OuttakeNew: Subsystem {
             }
 
             TurretMode.LL_AIM -> {
-                // FIX: Enable LL aim once, not toggle every frame
+                // Enable LL aim once, not toggle every frame
                 if (!llAimWasEnabled) {
                     LLTurret.autoAimEnabled = true
                     llAimWasEnabled = true
                 }
                 // LLTurret.periodic() handles the actual aiming
 
-                // FIX: Check if LL is ready
                 if (!limeLight.isReady()) {
                     ActiveOpMode.telemetry.addData("LL Turret", "Limelight not ready")
                 } else if (!limeLight.hasValidTarget) {
@@ -86,7 +93,6 @@ object OuttakeNew: Subsystem {
 
             TurretMode.MANUAL_AIM -> {
                 // Manual aiming uses gP variable (set by gamepad)
-                // FIX: Disable LL aim
                 if (llAimWasEnabled) {
                     LLTurret.autoAimEnabled = false
                     llAimWasEnabled = false
@@ -95,13 +101,11 @@ object OuttakeNew: Subsystem {
             }
 
             TurretMode.ENCODER_AIM -> {
-                // FIX: Disable LL aim
                 if (llAimWasEnabled) {
                     LLTurret.autoAimEnabled = false
                     llAimWasEnabled = false
                 }
 
-                // FIX: Only run if pose is valid
                 if (DriveTrain.isPoseValid()) {
                     Turret.autoAimAbsolute()
                 } else {
@@ -111,13 +115,11 @@ object OuttakeNew: Subsystem {
             }
 
             TurretMode.PEDRO_AIM -> {
-                // FIX: Disable LL aim
                 if (llAimWasEnabled) {
                     LLTurret.autoAimEnabled = false
                     llAimWasEnabled = false
                 }
 
-                // FIX: Only run if pose is valid
                 if (DriveTrain.isPoseValid()) {
                     Turret.autoAim()
                 } else {
@@ -126,6 +128,10 @@ object OuttakeNew: Subsystem {
                 }
             }
         }
+
+        // Update previous modes for next cycle
+        previousAdjustMode = adjustMode
+        previousTurretMode = turretMode
 
         // Telemetry
         ActiveOpMode.telemetry.run {
@@ -138,7 +144,7 @@ object OuttakeNew: Subsystem {
         }
     }
 
-    // FIX: Safe mode switching commands
+    // Safe mode switching commands
     val idleMode = InstantCommand {
         adjustMode = OuttakeMode.IDLE
         turretMode = TurretMode.IDLE
@@ -150,7 +156,6 @@ object OuttakeNew: Subsystem {
     }
 
     val autoModeManual = InstantCommand {
-        // FIX: Check prerequisites
         if (!DriveTrain.isPoseValid()) {
             ActiveOpMode.telemetry.addData("Mode Switch", "Cannot use auto - no pose")
             return@InstantCommand
@@ -169,7 +174,6 @@ object OuttakeNew: Subsystem {
     }
 
     val autoModeLL = InstantCommand {
-        // FIX: Check prerequisites
         if (!limeLight.isReady()) {
             ActiveOpMode.telemetry.addData("Mode Switch", "Cannot use LL - not ready")
             return@InstantCommand
@@ -178,30 +182,25 @@ object OuttakeNew: Subsystem {
         turretMode = TurretMode.LL_AIM
     }
 
-    // FIX: Add helper functions
+    // Helper functions
     fun setAdjustMode(mode: OuttakeMode) {
         adjustMode = mode
     }
 
     fun setTurretMode(mode: TurretMode) {
         // Clean up previous mode
-        when(turretMode) {
-            TurretMode.LL_AIM -> {
-                LLTurret.autoAimEnabled = false
-                llAimWasEnabled = false
-            }
-            else -> {}
+        if (turretMode == TurretMode.LL_AIM) {
+            LLTurret.autoAimEnabled = false
+            llAimWasEnabled = false
         }
         turretMode = mode
     }
 
-    // FIX: Combined mode setter
     fun setModes(adjust: OuttakeMode, turret: TurretMode) {
         setAdjustMode(adjust)
         setTurretMode(turret)
     }
 
-    // Helper to check if ready for auto modes
     fun canUseAutoModes(): Boolean {
         return DriveTrain.isPoseValid()
     }

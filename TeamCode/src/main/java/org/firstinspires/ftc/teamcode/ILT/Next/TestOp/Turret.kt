@@ -1,36 +1,49 @@
 package org.firstinspires.ftc.teamcode.ILT.Next.TestOp
 
-import com.qualcomm.robotcore.eventloop.opmode.OpMode
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp
+import dev.nextftc.core.components.BindingsComponent
+import dev.nextftc.core.components.SubsystemComponent
+import dev.nextftc.ftc.Gamepads
+import dev.nextftc.ftc.NextFTCOpMode
+import dev.nextftc.ftc.components.BulkReadComponent
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Data.Alliance
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Drive.DriveTrain
 import org.firstinspires.ftc.teamcode.ILT.Next.Subsystem.Outtake.Shooter.Turret
 import kotlin.math.PI
+import kotlin.math.abs
 
 @TeleOp(name = "Turret Test", group = "Test")
-class TurretTestOpMode : OpMode() {
+class TurretTestOpMode : NextFTCOpMode() {
 
     // Current commanded yaw (radians)
     private var targetYaw = 0.0
 
     // Scale from stick input to radians per loop
-    private val stickScale = 0.02   // Smaller = slower, more precise
+    private val stickScale = 0.02
 
-    // FIX: Track control mode
+    // Control mode
     private enum class ControlMode {
-        MANUAL,      // Stick control
-        ABSOLUTE,    // Using absolute encoder
-        PRESET       // Preset positions
+        MANUAL,
+        ABSOLUTE,
+        PRESET
     }
 
     private var mode = ControlMode.MANUAL
 
-    override fun init() {
-        // FIX: Initialize DriveTrain for auto-aim testing
+    init {
+        addComponents(
+            SubsystemComponent(
+                DriveTrain,
+                Turret
+            ),
+            BindingsComponent,
+            BulkReadComponent
+        )
+    }
+
+    override fun onInit() {
         DriveTrain.setAlliance(Alliance.RED)
         DriveTrain.initialize()
-
-        // FIX: Initialize Turret
         Turret.initialize()
 
         telemetry.addLine("=== TURRET TEST ===")
@@ -48,55 +61,47 @@ class TurretTestOpMode : OpMode() {
         telemetry.update()
     }
 
-    override fun start() {
-        targetYaw = 0.0
-        mode = ControlMode.MANUAL
+    override fun onStartButtonPressed() {
+        // Mode switching (using proper bindings - no Thread.sleep!)
+        val toggleMode = Gamepads.gamepad1.y
+        toggleMode.whenBecomesTrue {
+            mode = when (mode) {
+                ControlMode.MANUAL -> ControlMode.ABSOLUTE
+                ControlMode.ABSOLUTE -> ControlMode.PRESET
+                ControlMode.PRESET -> ControlMode.MANUAL
+            }
+        }
+
+        // Preset positions
+        val centerPreset = Gamepads.gamepad1.a
+        centerPreset.whenBecomesTrue { targetYaw = 0.0 }
+
+        val rightPreset = Gamepads.gamepad1.b
+        rightPreset.whenBecomesTrue { targetYaw = Math.toRadians(45.0) }
+
+        val leftPreset = Gamepads.gamepad1.x
+        leftPreset.whenBecomesTrue { targetYaw = Math.toRadians(-45.0) }
+
+        // Encoder controls
+        val zeroEncoder = Gamepads.gamepad1.dpadUp
+        zeroEncoder.whenBecomesTrue { Turret.zeroMotor.schedule() }
+
+        val calibrateAbsolute = Gamepads.gamepad1.dpadDown
+        calibrateAbsolute.whenBecomesTrue { Turret.calibrateEncoderCommand.schedule() }
     }
 
-    override fun loop() {
+    override fun onUpdate() {
         // Run turret's periodic
         Turret.periodic()
 
+        // Handle control based on mode
         when (mode) {
             ControlMode.MANUAL -> handleManualControl()
             ControlMode.ABSOLUTE -> handleAbsoluteControl()
             ControlMode.PRESET -> handlePresetControl()
         }
 
-        // === BUTTON CONTROLS ===
-
-        // Mode switching
-        if (gamepad1.y) {
-            mode = when (mode) {
-                ControlMode.MANUAL -> ControlMode.ABSOLUTE
-                ControlMode.ABSOLUTE -> ControlMode.PRESET
-                ControlMode.PRESET -> ControlMode.MANUAL
-            }
-            Thread.sleep(200)  // Debounce
-        }
-
-        // Preset positions (work in all modes)
-        if (gamepad1.a) {
-            targetYaw = 0.0  // Center
-        }
-        if (gamepad1.b) {
-            targetYaw = Math.toRadians(45.0)  // Right 45°
-        }
-        if (gamepad1.x) {
-            targetYaw = Math.toRadians(-45.0)  // Left 45°
-        }
-
-        // Encoder controls
-        if (gamepad1.dpad_up) {
-            Turret.zeroMotor
-            Thread.sleep(200)
-        }
-        if (gamepad1.dpad_down) {
-            Turret.calibrateAbsoluteEncoder()
-            Thread.sleep(200)
-        }
-
-        // === TELEMETRY ===
+        // Telemetry
         telemetry.addLine("=== TURRET STATUS ===")
         telemetry.addData("Control Mode", mode)
         telemetry.addLine()
@@ -117,7 +122,6 @@ class TurretTestOpMode : OpMode() {
 
         telemetry.addLine("=== ENCODERS ===")
         telemetry.addData("Relative Encoder", Turret.turret.currentPosition)
-        // FIX: Check if absolute encoder is available
         if (Turret.getAbsolutePositionRatio() > 0.0) {
             telemetry.addData("Absolute Ratio", "%.3f".format(Turret.getAbsolutePositionRatio()))
             telemetry.addData("Absolute Degrees", "%.1f°".format(Turret.getAbsolutePositionDegrees()))
@@ -131,23 +135,19 @@ class TurretTestOpMode : OpMode() {
         telemetry.addData("Goal Position", "%.2f°".format(
             Math.toDegrees(Turret.turretController.goal.position)
         ))
-        telemetry.addData("Goal Velocity", "%.2f".format(
-            Turret.turretController.goal.velocity
-        ))
         telemetry.addLine()
 
         telemetry.addLine("=== CONTROLS ===")
-        telemetry.addData("Left Stick X", "%.3f".format(gamepad1.left_stick_x))
+        telemetry.addData("Left Stick X", "%.3f".format(Gamepads.gamepad1.leftStickX.state))
 
         telemetry.update()
     }
 
     private fun handleManualControl() {
-        // Left stick X: negative -> move turret right, positive -> move turret left
-        val stickX = gamepad1.left_stick_x.toDouble()
+        val stickX = Gamepads.gamepad1.leftStickX.state
 
         // Apply dead zone
-        if (Math.abs(stickX) > 0.05) {
+        if (abs(stickX) > 0.05) {
             targetYaw -= stickX * stickScale
         }
 
@@ -160,27 +160,25 @@ class TurretTestOpMode : OpMode() {
     }
 
     private fun handleAbsoluteControl() {
-        // Same as manual but uses absolute encoder
-        val stickX = gamepad1.left_stick_x.toDouble()
+        val stickX = Gamepads.gamepad1.leftStickX.state
 
-        if (Math.abs(stickX) > 0.05) {
+        if (abs(stickX) > 0.05) {
             targetYaw -= stickX * stickScale
         }
 
         val maxYaw = PI / 2
         targetYaw = targetYaw.coerceIn(-maxYaw, maxYaw)
 
-        // FIX: Use absolute encoder version
+        // Use absolute encoder version
         Turret.goToYawAbsolute(targetYaw)
     }
 
     private fun handlePresetControl() {
-        // Buttons set presets, turret goes there
-        // (Presets are handled in main loop)
+        // Presets are handled by button bindings in onStartButtonPressed
         Turret.goToYaw(targetYaw)
     }
 
-    override fun stop() {
+    override fun onStop() {
         // Stop turret when OpMode ends
         Turret.turret.power = 0.0
     }
